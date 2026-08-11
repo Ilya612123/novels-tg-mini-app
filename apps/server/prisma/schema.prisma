@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TelegramUser {
+  id              String            @id
+  username        String?
+  firstName       String?
+  lastName        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  progress        ReadingProgress[]
+  access          UserAccess?
+  payments        Payment[]
+  analyticsEvents AnalyticsEvent[]
+}
+
+model Book {
+  id               String            @id
+  title            String
+  author           String?
+  description      String?
+  coverPath        String?
+  chapterCount     Int
+  freeChapterLimit Int
+  sourceEpubFile   String
+  status           String            @default("published")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  chapters         Chapter[]
+  progress         ReadingProgress[]
+}
+
+model Chapter {
+  id          String @id
+  bookId      String
+  number      Int
+  title       String
+  contentPath String
+  wordCount   Int?
+  book        Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, number])
+}
+
+model ReadingProgress {
+  id            String       @id @default(cuid())
+  userId        String
+  bookId        String
+  chapterNumber Int
+  position      Int
+  percent       Float?
+  startedAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book          Book         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+}
+
+model UserAccess {
+  userId            String       @id
+  subscriptionUntil DateTime
+  updatedAt         DateTime     @updatedAt
+  user              TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String       @id @default(cuid())
+  userId          String
+  providerPayload String       @unique
+  starsAmount     Int
+  status          String
+  rawPayload      String?
+  createdAt       DateTime     @default(now())
+  paidAt          DateTime?
+  user            TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id         String       @id @default(cuid())
+  userId     String
+  username   String?
+  source     String
+  label      String
+  metadata   String?
+  occurredAt DateTime
+  flushedAt  DateTime?
+  user       TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([flushedAt, occurredAt])
+}
