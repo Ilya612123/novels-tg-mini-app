@@ -1,0 +1,19 @@
+{
+  "name": "novell-reader",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "dev:server": "pnpm --filter @novell-reader/server dev",
+    "dev:miniapp": "pnpm --filter @novell-reader/miniapp dev",
+    "import:epub": "pnpm --filter @novell-reader/server import:epub"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
