@@ -110,7 +110,7 @@ export function createApiServer(deps: ApiDeps) {
     asyncRoute(async (req, res) => {
       const user = await requireTelegramUser(deps.db, req);
       if (!deps.bot) throw new HttpError(503, "Бот недоступен для создания платежа");
-      res.json(await createAccessInvoiceLink({ bot: deps.bot, config: deps.config, userId: user.id }));
+      res.json(await createAccessInvoiceLink({ bot: deps.bot, db: deps.db, config: deps.config, userId: user.id }));
     })
   );
 
