@@ -21,8 +21,11 @@ Telegram-бот и Telegram Mini App для чтения новелл.
 5. Подготовить БД: `pnpm --filter @novell-reader/server prisma:migrate`.
 6. Положить EPUB-файлы в `content/epub/`.
 7. Импортировать книги: `pnpm import:epub`.
-8. Запустить backend и бота: `pnpm dev:server`.
-9. Запустить Mini App: `pnpm dev:miniapp`.
+8. Запустить локальную разработку с Cloudflare tunnel: `pnpm dev`.
+
+Команда `pnpm dev` поднимает backend, Mini App, Cloudflare HTTPS tunnel и настраивает Telegram webhook на публичный tunnel URL.
+
+Для нее нужен установленный `cloudflared`.
 
 ## Проверки
 

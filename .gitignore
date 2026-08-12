@@ -5,3 +5,4 @@ dist/
 *.db
 *.db-journal
 apps/miniapp/vite.config.js
+package-lock.json

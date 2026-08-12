@@ -13,6 +13,7 @@
 - `PUBLIC_BASE_URL`: публичный URL backend, если используются webhooks.
 - `PORT`: порт backend, по умолчанию `3000`.
 - `VITE_API_BASE_URL`: URL backend для Mini App, например `http://localhost:3000`.
+- `BOT_MODE`: `polling` или `webhook`. Для `pnpm dev` используется `webhook`.
 
 ## Telegram Bot
 
@@ -33,12 +34,34 @@ pnpm import:epub
 
 Импорт создает нормализованные книги, главы и обложки в `content/imported/` и БД. Служебные страницы вроде `Информация о книге` не считаются главами.
 
-## Запуск
+## Запуск Через `pnpm dev`
+
+Для разработки в Telegram используй:
+
+```bash
+pnpm dev
+```
+
+Эта команда:
+
+- запускает backend на `http://localhost:3000`;
+- запускает Mini App на `http://localhost:5173`;
+- запускает `cloudflared tunnel --url http://localhost:5173`;
+- ждет публичный `https://*.trycloudflare.com` URL;
+- вызывает локальный endpoint `/dev/setup-webhook`;
+- настраивает Telegram webhook на `https://*.trycloudflare.com/telegram/webhook`;
+- обновляет runtime `MINI_APP_URL`, чтобы кнопка `Книги` в `/start` открывала tunnel URL.
+
+Vite проксирует `/api`, `/content` и `/telegram` на backend, поэтому один Cloudflare URL работает и для Mini App, и для webhook.
+
+Для запуска нужен установленный `cloudflared`.
+
+## Ручной Запуск
 
 ```bash
 pnpm --filter @novell-reader/server prisma:generate
 pnpm --filter @novell-reader/server prisma:migrate
-pnpm dev:server
+BOT_MODE=polling pnpm dev:server
 pnpm dev:miniapp
 ```
 

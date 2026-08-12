@@ -3,7 +3,8 @@ import path from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import request from "supertest";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Bot } from "grammy";
 import { createApiServer } from "./api.js";
 import type { AppConfig } from "./config.js";
 import type { TestDb } from "./test/db.js";
@@ -19,7 +20,8 @@ const config: AppConfig = {
   ANALYTICS_CHANNEL_ID: "-1001",
   STARS_ACCESS_PRICE: 100,
   DATABASE_URL: "file:test.db",
-  PORT: 3000
+  PORT: 3000,
+  BOT_MODE: "polling"
 };
 
 beforeEach(async () => {
@@ -68,5 +70,25 @@ describe("createApiServer", () => {
       .expect(402);
 
     expect(res.body).toEqual({ canRead: false, reason: "paywall" });
+  });
+
+  it("sets Telegram webhook and runtime Mini App URL in local dev", async () => {
+    const setWebhook = vi.fn().mockResolvedValue(true);
+    const localConfig = { ...config };
+    const app = createApiServer({
+      config: localConfig,
+      db: testDb.db,
+      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot
+    });
+
+    const res = await request(app).post("/dev/setup-webhook").send({ publicUrl: "https://reader.trycloudflare.com/" }).expect(200);
+
+    expect(setWebhook).toHaveBeenCalledWith("https://reader.trycloudflare.com/telegram/webhook");
+    expect(localConfig.MINI_APP_URL).toBe("https://reader.trycloudflare.com");
+    expect(res.body).toEqual({
+      ok: true,
+      miniAppUrl: "https://reader.trycloudflare.com",
+      webhookUrl: "https://reader.trycloudflare.com/telegram/webhook"
+    });
   });
 });

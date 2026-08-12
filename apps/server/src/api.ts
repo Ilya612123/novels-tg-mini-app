@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
-import type { Bot } from "grammy";
+import { webhookCallback, type Bot } from "grammy";
 import { z } from "zod";
 import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db.js";
@@ -29,6 +29,10 @@ const AnalyticsSchema = z.object({
   metadata: z.unknown().optional()
 });
 
+const DevWebhookSetupSchema = z.object({
+  publicUrl: z.string().url()
+});
+
 function asyncRoute(handler: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     handler(req, res).catch(next);
@@ -43,10 +47,31 @@ export function createApiServer(deps: ApiDeps) {
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
+  if (deps.bot) {
+    app.post("/telegram/webhook", webhookCallback(deps.bot, "express"));
+  }
+
+  app.post(
+    "/dev/setup-webhook",
+    asyncRoute(async (req, res) => {
+      if (process.env.NODE_ENV === "production") {
+        throw new HttpError(404, "Маршрут доступен только локально");
+      }
+      if (!deps.bot) throw new HttpError(503, "Бот недоступен для настройки webhook");
+
+      const body = DevWebhookSetupSchema.parse(req.body);
+      const publicUrl = body.publicUrl.replace(/\/$/, "");
+      deps.config.MINI_APP_URL = publicUrl;
+      deps.config.PUBLIC_BASE_URL = publicUrl;
+      await deps.bot.api.setWebhook(`${publicUrl}/telegram/webhook`);
+      res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl: `${publicUrl}/telegram/webhook` });
+    })
+  );
+
   app.get(
     "/api/books",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       res.json(await listBooksForUser(deps.db, user.id));
     })
   );
@@ -54,7 +79,7 @@ export function createApiServer(deps: ApiDeps) {
   app.get(
     "/api/books/:bookId",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       const book = await getBookDetailForUser(deps.db, user.id, req.params.bookId);
       if (!book) throw new HttpError(404, "Книга не найдена");
       res.json(book);
@@ -64,7 +89,7 @@ export function createApiServer(deps: ApiDeps) {
   app.get(
     "/api/books/:bookId/chapters/:chapterNumber",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       const chapterNumber = Number(req.params.chapterNumber);
       if (!Number.isInteger(chapterNumber) || chapterNumber < 1) {
         throw new HttpError(400, "Некорректный номер главы");
@@ -83,7 +108,7 @@ export function createApiServer(deps: ApiDeps) {
   app.post(
     "/api/progress",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       const body = ProgressSchema.parse(req.body);
       res.json(await saveProgress(deps.db, { ...body, userId: user.id }));
     })
@@ -92,7 +117,7 @@ export function createApiServer(deps: ApiDeps) {
   app.post(
     "/api/analytics",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       const body = AnalyticsSchema.parse(req.body);
       await createAnalyticsEvent(deps.db, {
         userId: user.id,
@@ -108,7 +133,7 @@ export function createApiServer(deps: ApiDeps) {
   app.post(
     "/api/payments/create",
     asyncRoute(async (req, res) => {
-      const user = await requireTelegramUser(deps.db, req);
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
       if (!deps.bot) throw new HttpError(503, "Бот недоступен для создания платежа");
       res.json(await createAccessInvoiceLink({ bot: deps.bot, db: deps.db, config: deps.config, userId: user.id }));
     })

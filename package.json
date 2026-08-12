@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "pnpm --filter @novell-reader/shared build && pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "build": "pnpm --filter @novell-reader/shared build && pnpm -r build",
+    "codegen": "pnpm --filter @novell-reader/shared build && pnpm --filter @novell-reader/server prisma:generate",
+    "typecheck": "pnpm codegen && pnpm -r typecheck",
+    "test": "pnpm codegen && pnpm -r test",
+    "build": "pnpm codegen && pnpm -r build",
+    "dev": "node scripts/dev.mjs",
     "dev:server": "pnpm --filter @novell-reader/server dev",
     "dev:miniapp": "pnpm --filter @novell-reader/miniapp dev",
     "import:epub": "pnpm --filter @novell-reader/server import:epub"

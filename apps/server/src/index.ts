@@ -12,7 +12,11 @@ app.listen(config.PORT, () => {
   console.log(`Server listening on ${config.PORT}`);
 });
 
-bot.start();
+if (config.BOT_MODE === "polling") {
+  bot.start();
+} else {
+  console.log("Bot polling disabled; webhook mode is active");
+}
 
 setInterval(() => {
   flushAnalyticsToTelegram({ db: prisma, bot, channelId: config.ANALYTICS_CHANNEL_ID }).catch(console.error);

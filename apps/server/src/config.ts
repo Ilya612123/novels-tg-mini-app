@@ -9,7 +9,8 @@ const EnvSchema = z.object({
   STARS_ACCESS_PRICE: z.coerce.number().int().positive(),
   DATABASE_URL: z.string().min(1),
   PUBLIC_BASE_URL: z.string().url().optional(),
-  PORT: z.coerce.number().int().positive().default(3000)
+  PORT: z.coerce.number().int().positive().default(3000),
+  BOT_MODE: z.enum(["polling", "webhook"]).default("polling")
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;
