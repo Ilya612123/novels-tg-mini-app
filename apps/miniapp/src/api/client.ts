@@ -10,16 +10,21 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+type ApiRequestOptions = RequestInit & {
+  expectedStatuses?: number[];
+};
+
+async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { expectedStatuses = [], ...fetchOptions } = options;
   const res = await fetch(path, {
-    ...options,
+    ...fetchOptions,
     headers: {
       "content-type": "application/json",
       "x-telegram-init-data": getTelegramInitData(),
-      ...options.headers
+      ...fetchOptions.headers
     }
   });
-  if (!res.ok) {
+  if (!res.ok && !expectedStatuses.includes(res.status)) {
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, body?.error ?? `Ошибка API: ${res.status}`);
   }
@@ -33,7 +38,7 @@ export const api = {
   books: () => request<BookSummary[]>("/api/books"),
   book: (bookId: string) => request<BookSummary>(`/api/books/${bookId}`),
   chapter: (bookId: string, chapterNumber: number) =>
-    request<ChapterDto | LockedChapter>(`/api/books/${bookId}/chapters/${chapterNumber}`),
+    request<ChapterDto | LockedChapter>(`/api/books/${bookId}/chapters/${chapterNumber}`, { expectedStatuses: [402] }),
   saveProgress: (body: { bookId: string; chapterNumber: number; position: number; percent: number | null }) =>
     request("/api/progress", { method: "POST", body: JSON.stringify(body) }),
   analytics: (label: string, metadata?: unknown) =>

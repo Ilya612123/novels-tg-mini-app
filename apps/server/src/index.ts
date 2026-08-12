@@ -13,6 +13,7 @@ app.listen(config.PORT, () => {
 });
 
 if (config.BOT_MODE === "polling") {
+  await bot.api.deleteWebhook({ drop_pending_updates: true });
   bot.start();
 } else {
   console.log("Bot polling disabled; webhook mode is active");

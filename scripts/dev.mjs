@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { formatPortConflicts, getDevPreparationCommands, getOccupiedDevPorts } from "./dev-utils.mjs";
+import { formatPortConflicts, getDevPreparationCommands, getOccupiedDevPorts, stopPortListeners } from "./dev-utils.mjs";
 
 const SERVER_PORT = Number(process.env.PORT ?? 3000);
 const MINIAPP_PORT = Number(process.env.MINIAPP_PORT ?? 5173);
@@ -122,7 +122,11 @@ async function setupWebhook(publicUrl) {
 
   const result = await response.json();
   console.log(`[dev] Mini App URL: ${result.miniAppUrl}`);
-  console.log(`[dev] Telegram webhook: ${result.webhookUrl}`);
+  if (result.webhookUrl) {
+    console.log(`[dev] Telegram webhook: ${result.webhookUrl}`);
+  } else {
+    console.log("[dev] Telegram bot mode: polling");
+  }
 }
 
 function shutdown(code = 0) {
@@ -146,8 +150,20 @@ if (!process.env.BOT_TOKEN) {
 
 const occupiedPorts = await getOccupiedDevPorts({ serverPort: SERVER_PORT, miniappPort: MINIAPP_PORT });
 if (occupiedPorts.length > 0) {
-  console.error(formatPortConflicts(occupiedPorts));
-  process.exit(1);
+  const stoppedPids = await stopPortListeners(occupiedPorts);
+  if (stoppedPids.length === 0) {
+    console.error(formatPortConflicts(occupiedPorts));
+    process.exit(1);
+  }
+
+  console.log(`[dev] Stopped processes on occupied dev ports: kill ${stoppedPids.join(" ")}`);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const remainingOccupiedPorts = await getOccupiedDevPorts({ serverPort: SERVER_PORT, miniappPort: MINIAPP_PORT });
+  if (remainingOccupiedPorts.length > 0) {
+    console.error(formatPortConflicts(remainingOccupiedPorts));
+    process.exit(1);
+  }
 }
 
 for (const step of getDevPreparationCommands()) {
@@ -158,7 +174,7 @@ console.log("[dev] starting server, mini app and Cloudflare tunnel");
 
 spawnProcess("server", "pnpm", ["dev:server"], {
   env: {
-    BOT_MODE: "webhook",
+    BOT_MODE: "polling",
     PORT: String(SERVER_PORT),
     MINI_APP_URL: MINIAPP_ORIGIN,
     PUBLIC_BASE_URL: MINIAPP_ORIGIN

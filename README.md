@@ -23,7 +23,7 @@ Telegram-бот и Telegram Mini App для чтения новелл.
 7. Импортировать книги: `pnpm import:epub`.
 8. Запустить локальную разработку с Cloudflare tunnel: `pnpm dev`.
 
-Команда `pnpm dev` поднимает backend, Mini App, Cloudflare HTTPS tunnel и настраивает Telegram webhook на публичный tunnel URL.
+Команда `pnpm dev` поднимает backend, Mini App, Cloudflare HTTPS tunnel и запускает Telegram-бота в polling-режиме с кнопкой на публичный tunnel URL.
 
 Для нее нужен установленный `cloudflared`.
 

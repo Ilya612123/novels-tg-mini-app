@@ -34,15 +34,21 @@ const DevWebhookSetupSchema = z.object({
   publicUrl: z.string().url()
 });
 
-const DEV_WEBHOOK_SETUP_ATTEMPTS = 10;
+const DEV_WEBHOOK_SETUP_ATTEMPTS = 180;
+const MAX_DEV_WEBHOOK_RETRY_DELAY_MS = 30_000;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isTransientWebhookResolutionError(error: unknown) {
+function isTelegramRateLimitError(error: unknown) {
+  const maybeError = error as { error_code?: unknown } | null;
+  return maybeError?.error_code === 429;
+}
+
+function isRetryableWebhookSetupError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-  return /bad webhook/i.test(message) && /failed to resolve host/i.test(message);
+  return /failed to resolve host/i.test(message) || isTelegramRateLimitError(error);
 }
 
 async function setDevTelegramWebhook(bot: Bot, webhookUrl: string, retryDelayMs: number) {
@@ -51,10 +57,10 @@ async function setDevTelegramWebhook(bot: Bot, webhookUrl: string, retryDelayMs:
       await bot.api.setWebhook(webhookUrl);
       return;
     } catch (error) {
-      if (attempt === DEV_WEBHOOK_SETUP_ATTEMPTS || !isTransientWebhookResolutionError(error)) {
+      if (attempt === DEV_WEBHOOK_SETUP_ATTEMPTS || !isRetryableWebhookSetupError(error)) {
         throw error;
       }
-      await sleep(retryDelayMs);
+      await sleep(Math.min(retryDelayMs * attempt, MAX_DEV_WEBHOOK_RETRY_DELAY_MS));
     }
   }
 }
@@ -73,7 +79,7 @@ export function createApiServer(deps: ApiDeps) {
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
-  if (deps.bot) {
+  if (deps.bot && deps.config.BOT_MODE === "webhook") {
     app.post("/telegram/webhook", webhookCallback(deps.bot, "express"));
   }
 
@@ -90,7 +96,11 @@ export function createApiServer(deps: ApiDeps) {
       const webhookUrl = `${publicUrl}/telegram/webhook`;
       deps.config.MINI_APP_URL = publicUrl;
       deps.config.PUBLIC_BASE_URL = publicUrl;
-      await setDevTelegramWebhook(deps.bot, webhookUrl, deps.devWebhookRetryDelayMs ?? 1000);
+      if (deps.config.BOT_MODE === "polling") {
+        res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl: null });
+        return;
+      }
+      await setDevTelegramWebhook(deps.bot, webhookUrl, deps.devWebhookRetryDelayMs ?? 5000);
       res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl });
     })
   );

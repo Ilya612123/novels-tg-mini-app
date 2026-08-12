@@ -74,7 +74,7 @@ describe("createApiServer", () => {
 
   it("sets Telegram webhook and runtime Mini App URL in local dev", async () => {
     const setWebhook = vi.fn().mockResolvedValue(true);
-    const localConfig = { ...config };
+    const localConfig = { ...config, BOT_MODE: "webhook" as const };
     const app = createApiServer({
       config: localConfig,
       db: testDb.db,
@@ -92,12 +92,42 @@ describe("createApiServer", () => {
     });
   });
 
+  it("updates runtime Mini App URL without setting webhook in polling mode", async () => {
+    const setWebhook = vi.fn().mockResolvedValue(true);
+    const localConfig = { ...config, BOT_MODE: "polling" as const };
+    const app = createApiServer({
+      config: localConfig,
+      db: testDb.db,
+      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot
+    });
+
+    const res = await request(app).post("/dev/setup-webhook").send({ publicUrl: "https://reader.trycloudflare.com/" }).expect(200);
+
+    expect(setWebhook).not.toHaveBeenCalled();
+    expect(localConfig.MINI_APP_URL).toBe("https://reader.trycloudflare.com");
+    expect(res.body).toEqual({
+      ok: true,
+      miniAppUrl: "https://reader.trycloudflare.com",
+      webhookUrl: null
+    });
+  });
+
+  it("does not register Telegram webhook route in polling mode", async () => {
+    const app = createApiServer({
+      config: { ...config, BOT_MODE: "polling" as const },
+      db: testDb.db,
+      bot: { api: {}, isRunning: () => false } as unknown as Bot
+    });
+
+    await request(app).post("/telegram/webhook").send({}).expect(404);
+  });
+
   it("retries transient Telegram webhook DNS failures in local dev", async () => {
     const setWebhook = vi
       .fn()
       .mockRejectedValueOnce(new Error("Bad Request: bad webhook: Failed to resolve host: Name or service not known"))
       .mockResolvedValueOnce(true);
-    const localConfig = { ...config };
+    const localConfig = { ...config, BOT_MODE: "webhook" as const };
     const app = createApiServer({
       config: localConfig,
       db: testDb.db,
@@ -114,5 +144,42 @@ describe("createApiServer", () => {
     expect(setWebhook).toHaveBeenNthCalledWith(1, "https://reader.trycloudflare.com/telegram/webhook");
     expect(setWebhook).toHaveBeenNthCalledWith(2, "https://reader.trycloudflare.com/telegram/webhook");
     expect(res.body.webhookUrl).toBe("https://reader.trycloudflare.com/telegram/webhook");
+  });
+
+  it("keeps retrying Telegram webhook DNS failures long enough for fresh tunnel hosts", async () => {
+    const transientFailure = new Error("Bad Request: bad webhook: Failed to resolve host: Name or service not known");
+    const setWebhook = vi.fn();
+    for (let attempt = 0; attempt < 75; attempt += 1) {
+      setWebhook.mockRejectedValueOnce(transientFailure);
+    }
+    setWebhook.mockResolvedValueOnce(true);
+    const app = createApiServer({
+      config: { ...config, BOT_MODE: "webhook" as const },
+      db: testDb.db,
+      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      devWebhookRetryDelayMs: 0
+    });
+
+    await request(app).post("/dev/setup-webhook").send({ publicUrl: "https://reader.trycloudflare.com/" }).expect(200);
+
+    expect(setWebhook).toHaveBeenCalledTimes(76);
+  });
+
+  it("retries Telegram webhook rate limits in local dev", async () => {
+    const rateLimitError = Object.assign(new Error("Too Many Requests: retry after 1"), {
+      error_code: 429,
+      parameters: { retry_after: 1 }
+    });
+    const setWebhook = vi.fn().mockRejectedValueOnce(rateLimitError).mockResolvedValueOnce(true);
+    const app = createApiServer({
+      config: { ...config, BOT_MODE: "webhook" as const },
+      db: testDb.db,
+      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      devWebhookRetryDelayMs: 0
+    });
+
+    await request(app).post("/dev/setup-webhook").send({ publicUrl: "https://reader.trycloudflare.com/" }).expect(200);
+
+    expect(setWebhook).toHaveBeenCalledTimes(2);
   });
 });

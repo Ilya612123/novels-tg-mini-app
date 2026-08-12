@@ -50,10 +50,10 @@ pnpm dev
 - запускает `cloudflared tunnel --url http://localhost:5173`;
 - ждет публичный `https://*.trycloudflare.com` URL;
 - вызывает локальный endpoint `/dev/setup-webhook`;
-- настраивает Telegram webhook на `https://*.trycloudflare.com/telegram/webhook`;
+- очищает старый Telegram webhook и запускает бота в polling-режиме;
 - обновляет runtime `MINI_APP_URL`, чтобы кнопка `Книги` в `/start` открывала tunnel URL.
 
-Vite проксирует `/api`, `/content` и `/telegram` на backend, поэтому один Cloudflare URL работает и для Mini App, и для webhook.
+Vite проксирует `/api`, `/content` и `/telegram` на backend, поэтому один Cloudflare URL работает для Mini App и backend API. Локальный бот использует polling, потому что свежие `trycloudflare.com` hostname иногда недоступны DNS-резолверам Telegram Bot API для `setWebhook`.
 
 Для запуска нужен установленный `cloudflared`.
 
