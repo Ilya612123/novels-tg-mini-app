@@ -42,12 +42,20 @@ export function formatPortConflicts(ports) {
 }
 
 export function getDevPreparationCommands() {
+  const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+
   return [
     {
       name: "prisma",
       command: "pnpm",
       args: ["--filter", "@novell-reader/server", "exec", "prisma", "db", "push"],
-      env: { DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db" }
+      env: { DATABASE_URL: databaseUrl }
+    },
+    {
+      name: "epub-import",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/server", "import:epub"],
+      env: { DATABASE_URL: databaseUrl }
     }
   ];
 }

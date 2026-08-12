@@ -17,12 +17,18 @@ test("getOccupiedDevPorts returns no conflicts when dev ports are available", as
   assert.deepEqual(occupiedPorts, []);
 });
 
-test("getDevPreparationCommands syncs the local Prisma database before startup", () => {
+test("getDevPreparationCommands syncs the local Prisma database and imports EPUB before startup", () => {
   assert.deepEqual(getDevPreparationCommands(), [
     {
       name: "prisma",
       command: "pnpm",
       args: ["--filter", "@novell-reader/server", "exec", "prisma", "db", "push"],
+      env: { DATABASE_URL: "file:./dev.db" }
+    },
+    {
+      name: "epub-import",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/server", "import:epub"],
       env: { DATABASE_URL: "file:./dev.db" }
     }
   ]);
