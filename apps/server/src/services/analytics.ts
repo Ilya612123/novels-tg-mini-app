@@ -19,7 +19,7 @@ export async function createAnalyticsEvent(db: DbClient, input: AnalyticsInput):
 export async function flushAnalyticsToTelegram(input: {
   db: DbClient;
   bot: Bot;
-  channelId: string;
+  chatId: string;
   now?: Date;
 }): Promise<{ sent: boolean; eventCount: number }> {
   const now = input.now ?? new Date();
@@ -40,7 +40,7 @@ export async function flushAnalyticsToTelegram(input: {
 
   if (!text) return { sent: false, eventCount: 0 };
 
-  await input.bot.api.sendMessage(input.channelId, text);
+  await input.bot.api.sendMessage(input.chatId, text);
   await markAnalyticsEventsFlushed(
     input.db,
     events.map((event) => event.id),

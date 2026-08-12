@@ -17,7 +17,7 @@ const config: AppConfig = {
   BOT_TOKEN: "token",
   MINI_APP_URL: "https://example.com/app",
   SUPPORT_URL: "https://t.me/esimsmile_support",
-  ANALYTICS_CHANNEL_ID: "-1001",
+  ANALYTICS_USER_ID: "5100586818",
   STARS_ACCESS_PRICE: 100,
   DATABASE_URL: "file:test.db",
   PORT: 3000,
@@ -90,5 +90,29 @@ describe("createApiServer", () => {
       miniAppUrl: "https://reader.trycloudflare.com",
       webhookUrl: "https://reader.trycloudflare.com/telegram/webhook"
     });
+  });
+
+  it("retries transient Telegram webhook DNS failures in local dev", async () => {
+    const setWebhook = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Bad Request: bad webhook: Failed to resolve host: Name or service not known"))
+      .mockResolvedValueOnce(true);
+    const localConfig = { ...config };
+    const app = createApiServer({
+      config: localConfig,
+      db: testDb.db,
+      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      devWebhookRetryDelayMs: 0
+    });
+
+    const res = await request(app)
+      .post("/dev/setup-webhook")
+      .send({ publicUrl: "https://reader.trycloudflare.com/" })
+      .expect(200);
+
+    expect(setWebhook).toHaveBeenCalledTimes(2);
+    expect(setWebhook).toHaveBeenNthCalledWith(1, "https://reader.trycloudflare.com/telegram/webhook");
+    expect(setWebhook).toHaveBeenNthCalledWith(2, "https://reader.trycloudflare.com/telegram/webhook");
+    expect(res.body.webhookUrl).toBe("https://reader.trycloudflare.com/telegram/webhook");
   });
 });

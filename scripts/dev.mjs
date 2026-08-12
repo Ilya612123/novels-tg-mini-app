@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { formatPortConflicts, getDevPreparationCommands, getOccupiedDevPorts } from "./dev-utils.mjs";
 
 const SERVER_PORT = Number(process.env.PORT ?? 3000);
 const MINIAPP_PORT = Number(process.env.MINIAPP_PORT ?? 5173);
@@ -53,6 +54,27 @@ function spawnProcess(name, command, args, options = {}) {
   });
 
   return child;
+}
+
+function runCommand(name, command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...options.env },
+      shell: false
+    });
+
+    child.stdout.on("data", (chunk) => handleOutput(name, chunk));
+    child.stderr.on("data", (chunk) => handleOutput(name, chunk));
+    child.on("error", reject);
+    child.on("exit", (code, signal) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`${name} exited with code ${code ?? "null"} signal ${signal ?? "null"}`));
+    });
+  });
 }
 
 function handleOutput(name, chunk) {
@@ -120,6 +142,16 @@ loadDotEnv();
 if (!process.env.BOT_TOKEN) {
   console.error("[dev] BOT_TOKEN is required. Create .env or export BOT_TOKEN before running pnpm dev.");
   process.exit(1);
+}
+
+const occupiedPorts = await getOccupiedDevPorts({ serverPort: SERVER_PORT, miniappPort: MINIAPP_PORT });
+if (occupiedPorts.length > 0) {
+  console.error(formatPortConflicts(occupiedPorts));
+  process.exit(1);
+}
+
+for (const step of getDevPreparationCommands()) {
+  await runCommand(step.name, step.command, step.args, { env: step.env });
 }
 
 console.log("[dev] starting server, mini app and Cloudflare tunnel");

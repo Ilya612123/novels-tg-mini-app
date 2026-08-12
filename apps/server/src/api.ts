@@ -15,6 +15,7 @@ export type ApiDeps = {
   config: AppConfig;
   db: DbClient;
   bot?: Bot;
+  devWebhookRetryDelayMs?: number;
 };
 
 const ProgressSchema = z.object({
@@ -32,6 +33,31 @@ const AnalyticsSchema = z.object({
 const DevWebhookSetupSchema = z.object({
   publicUrl: z.string().url()
 });
+
+const DEV_WEBHOOK_SETUP_ATTEMPTS = 10;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientWebhookResolutionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /bad webhook/i.test(message) && /failed to resolve host/i.test(message);
+}
+
+async function setDevTelegramWebhook(bot: Bot, webhookUrl: string, retryDelayMs: number) {
+  for (let attempt = 1; attempt <= DEV_WEBHOOK_SETUP_ATTEMPTS; attempt += 1) {
+    try {
+      await bot.api.setWebhook(webhookUrl);
+      return;
+    } catch (error) {
+      if (attempt === DEV_WEBHOOK_SETUP_ATTEMPTS || !isTransientWebhookResolutionError(error)) {
+        throw error;
+      }
+      await sleep(retryDelayMs);
+    }
+  }
+}
 
 function asyncRoute(handler: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -61,10 +87,11 @@ export function createApiServer(deps: ApiDeps) {
 
       const body = DevWebhookSetupSchema.parse(req.body);
       const publicUrl = body.publicUrl.replace(/\/$/, "");
+      const webhookUrl = `${publicUrl}/telegram/webhook`;
       deps.config.MINI_APP_URL = publicUrl;
       deps.config.PUBLIC_BASE_URL = publicUrl;
-      await deps.bot.api.setWebhook(`${publicUrl}/telegram/webhook`);
-      res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl: `${publicUrl}/telegram/webhook` });
+      await setDevTelegramWebhook(deps.bot, webhookUrl, deps.devWebhookRetryDelayMs ?? 1000);
+      res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl });
     })
   );
 

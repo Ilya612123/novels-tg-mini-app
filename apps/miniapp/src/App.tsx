@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookSummary, ChapterDto } from "@novell-reader/shared";
-import { api } from "./api/client";
+import { ApiError, api } from "./api/client";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
 import { LoadingState } from "./components/LoadingState";
@@ -18,11 +18,21 @@ type View =
   | { name: "reader"; bookId: string; chapter: ChapterDto }
   | { name: "paywall"; bookId: string; chapterNumber: number };
 
+type AppError = {
+  status: number | null;
+  message: string;
+};
+
+function toAppError(err: unknown, fallbackMessage: string): AppError {
+  if (err instanceof ApiError) return { status: err.status, message: err.message };
+  return { status: null, message: err instanceof Error ? err.message : fallbackMessage };
+}
+
 export function App() {
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [view, setView] = useState<View>({ name: "catalog" });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
 
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
@@ -32,7 +42,7 @@ export function App() {
         setBooks(items);
         api.analytics("открыл Каталог").catch(console.error);
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Не удалось загрузить книги"))
+      .catch((err: unknown) => setError(toAppError(err, "Не удалось загрузить книги")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -61,16 +71,25 @@ export function App() {
       }
       setView({ name: "reader", bookId, chapter });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось открыть главу");
+      setError(toAppError(err, "Не удалось открыть главу"));
     } finally {
       setLoading(false);
     }
   };
 
   const activeTab: Tab = view.name === "profile" ? "profile" : "catalog";
+  const isTelegramAuthError = error?.status === 401;
 
   if (loading && books.length === 0) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (isTelegramAuthError) {
+    return (
+      <ErrorState
+        title="Откройте приложение через Telegram"
+        message="Так мы сможем определить ваш профиль и сохранить прогресс чтения."
+      />
+    );
+  }
+  if (error) return <ErrorState message={error.message} />;
 
   return (
     <div className="app-shell">
@@ -100,7 +119,7 @@ export function App() {
           onBack={() => setView({ name: "novel", bookId: view.bookId })}
           onBuy={() => {
             api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber }).catch(console.error);
-            api.createPayment().then((payment) => openInvoice(payment.invoiceLink)).catch((err) => setError(err instanceof Error ? err.message : "Не удалось открыть оплату"));
+            api.createPayment().then((payment) => openInvoice(payment.invoiceLink)).catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
           }}
         />
       )}

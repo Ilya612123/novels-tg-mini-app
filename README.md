@@ -15,7 +15,7 @@ Telegram-бот и Telegram Mini App для чтения новелл.
 ## Быстрый Старт
 
 1. Скопировать `.env.example` в `.env`.
-2. Заполнить `BOT_TOKEN`, `MINI_APP_URL`, `ANALYTICS_CHANNEL_ID`, `STARS_ACCESS_PRICE`.
+2. Заполнить `BOT_TOKEN`, `ANALYTICS_USER_ID`, `STARS_ACCESS_PRICE`.
 3. Установить зависимости: `pnpm install`.
 4. Сгенерировать Prisma Client: `pnpm --filter @novell-reader/server prisma:generate`.
 5. Подготовить БД: `pnpm --filter @novell-reader/server prisma:migrate`.

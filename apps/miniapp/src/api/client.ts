@@ -1,10 +1,17 @@
 import type { BookSummary, ChapterDto } from "@novell-reader/shared";
 import { getTelegramInitData } from "../telegram";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(path, {
     ...options,
     headers: {
       "content-type": "application/json",
@@ -14,7 +21,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.error ?? `Ошибка API: ${res.status}`);
+    throw new ApiError(res.status, body?.error ?? `Ошибка API: ${res.status}`);
   }
   return res.json() as Promise<T>;
 }

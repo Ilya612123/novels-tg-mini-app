@@ -5,23 +5,24 @@
 Создай `.env` из `.env.example` и заполни:
 
 - `BOT_TOKEN`: токен Telegram-бота.
-- `MINI_APP_URL`: публичный URL Mini App.
-- `SUPPORT_URL`: `https://t.me/esimsmile_support`.
-- `ANALYTICS_CHANNEL_ID`: id Telegram-канала для логов.
+- `ANALYTICS_USER_ID`: твой Telegram user id. Основной бот будет слать аналитику тебе в личку.
 - `STARS_ACCESS_PRICE`: цена доступа на 30 дней в Stars.
-- `DATABASE_URL`: локально можно оставить `file:./dev.db`.
-- `PUBLIC_BASE_URL`: публичный URL backend, если используются webhooks.
-- `PORT`: порт backend, по умолчанию `3000`.
-- `VITE_API_BASE_URL`: URL backend для Mini App, например `http://localhost:3000`.
-- `BOT_MODE`: `polling` или `webhook`. Для `pnpm dev` используется `webhook`.
+
+Остальное имеет дефолты:
+
+- `PUBLIC_BASE_URL`: публичный URL сервера. Если задан, Mini App URL берется из него.
+- `MINI_APP_URL`: нужен только если Mini App живет не на домене сервера.
+- `SUPPORT_URL`: по умолчанию `https://t.me/esimsmile_support`.
+- `DATABASE_URL`: по умолчанию SQLite `file:./dev.db`.
+- `PORT`: по умолчанию `3000`.
 
 ## Telegram Bot
 
 1. Создай бота через BotFather.
 2. Вставь токен в `BOT_TOKEN`.
 3. Создай Mini App/Web App для бота и укажи URL frontend-приложения.
-4. Добавь бота администратором в закрытый канал аналитики.
-5. Укажи id канала в `ANALYTICS_CHANNEL_ID`.
+4. Открой бота в Telegram и нажми `/start`, иначе Telegram не даст боту писать тебе первым.
+5. Укажи свой Telegram user id в `ANALYTICS_USER_ID`.
 
 ## Контент
 
@@ -61,7 +62,7 @@ Vite проксирует `/api`, `/content` и `/telegram` на backend, поэ
 ```bash
 pnpm --filter @novell-reader/server prisma:generate
 pnpm --filter @novell-reader/server prisma:migrate
-BOT_MODE=polling pnpm dev:server
+pnpm dev:server
 pnpm dev:miniapp
 ```
 

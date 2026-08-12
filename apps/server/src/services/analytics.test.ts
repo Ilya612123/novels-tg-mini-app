@@ -37,7 +37,7 @@ describe("flushAnalyticsToTelegram", () => {
     const result = await flushAnalyticsToTelegram({
       db: testDb.db,
       bot: { api: { sendMessage } } as unknown as Bot,
-      channelId: "-1001",
+      chatId: "-1001",
       now: new Date("2026-08-11T09:22:00.000Z")
     });
 

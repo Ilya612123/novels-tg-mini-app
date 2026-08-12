@@ -19,5 +19,5 @@ if (config.BOT_MODE === "polling") {
 }
 
 setInterval(() => {
-  flushAnalyticsToTelegram({ db: prisma, bot, channelId: config.ANALYTICS_CHANNEL_ID }).catch(console.error);
+  flushAnalyticsToTelegram({ db: prisma, bot, chatId: config.ANALYTICS_USER_ID }).catch(console.error);
 }, 60_000);
