@@ -111,7 +111,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Купить подписку · 299₽" })).toBeTruthy();
   });
 
-  it("scrolls to the top when a locked next chapter opens the paywall", async () => {
+  it("opens each page in a fresh scroll container without calling window scroll APIs", async () => {
     const scrollTo = vi.mocked(window.scrollTo);
     vi.stubGlobal(
       "fetch",
@@ -178,12 +178,85 @@ describe("App", () => {
     fireEvent.click(await screen.findByText("Тестовая новелла"));
     fireEvent.click(await screen.findByText("Читать"));
     await screen.findByText("Глава 1");
+    const readerScrollRoot = screen.getByTestId("page-scroll-root");
+    readerScrollRoot.scrollTop = 420;
     scrollTo.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
     await screen.findByText("Подписка");
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0 });
+    const paywallScrollRoot = screen.getByTestId("page-scroll-root");
+    expect(paywallScrollRoot).not.toBe(readerScrollRoot);
+    expect(paywallScrollRoot.scrollTop).toBe(0);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("hides the main bottom navigation while reading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "book-1",
+                  title: "Тестовая новелла",
+                  author: "Автор",
+                  description: "Описание",
+                  coverUrl: null,
+                  chapterCount: 10,
+                  freeChapterLimit: 3,
+                  rating: {
+                    averageScore: 9.14,
+                    reviewCount: 2400,
+                    distribution: [
+                      { score: 10, count: 600, percent: 25 },
+                      { score: 9, count: 1608, percent: 67 },
+                      { score: 8, count: 96, percent: 4 },
+                      { score: 7, count: 24, percent: 1 },
+                      { score: 6, count: 24, percent: 1 },
+                      { score: 5, count: 12, percent: 0.5 },
+                      { score: 4, count: 12, percent: 0.5 },
+                      { score: 3, count: 12, percent: 0.5 },
+                      { score: 2, count: 6, percent: 0.3 },
+                      { score: 1, count: 6, percent: 0.3 }
+                    ]
+                  },
+                  progress: null
+                }
+              ]),
+              { status: 200 }
+            )
+          );
+        }
+        if (url.endsWith("/api/books/book-1/chapters/1")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                id: "chapter-1",
+                bookId: "book-1",
+                number: 1,
+                title: "Глава 1",
+                html: "<p>Текст главы</p>",
+                canRead: true
+              }),
+              { status: 200 }
+            )
+          );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("navigation", { name: "Основная навигация" })).toBeTruthy();
+    fireEvent.click(await screen.findByText("Тестовая новелла"));
+    fireEvent.click(await screen.findByText("Читать"));
+
+    await screen.findByText("Глава 1");
+    expect(screen.queryByRole("navigation", { name: "Основная навигация" })).toBeNull();
   });
 
   it("opens the subscription paywall from the profile", async () => {
@@ -231,7 +304,9 @@ describe("App", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByText("Профиль"));
-    fireEvent.click(screen.getByRole("button", { name: "Поддержка" }));
+    const supportButton = screen.getByRole("button", { name: "Поддержка" });
+    expect(supportButton.className).toContain("profile-support-button");
+    fireEvent.click(supportButton);
 
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/esimsmile_support");
   });

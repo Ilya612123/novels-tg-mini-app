@@ -10,7 +10,7 @@
   --font-size-title-2: 22px;
   --font-size-title-1: 28px;
   --font-size-large-title: 34px;
-  --reader-font-size: 18px;
+  --reader-font-size: 16px;
 
   --line-height-caption: 16px;
   --line-height-footnote: 18px;
@@ -21,7 +21,7 @@
   --line-height-title-2: 28px;
   --line-height-title-1: 34px;
   --line-height-large-title: 41px;
-  --reader-line-height: 1.65;
+  --reader-line-height: 1.5;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -79,6 +79,10 @@
   --control-height-lg: 56px;
   --control-height-xl: 64px;
   --nav-height: 84px;
+  --reader-action-height: var(--control-height-sm);
+  --reader-bottom-reserve: 0px;
+  --reader-page-gap: var(--space-4);
+  --app-viewport-height: 100dvh;
   --book-title-lines: 3;
   --z-cover-badge: 1;
   --z-paywall-buy-bar: 20;
@@ -109,13 +113,32 @@ body {
   background: var(--tg-color-bg);
 }
 
+html,
+body,
+#root {
+  height: var(--app-viewport-height);
+  overflow: hidden;
+}
+
 button {
   font: inherit;
 }
 
 .app-shell {
-  min-height: 100vh;
-  padding-bottom: var(--nav-height);
+  height: var(--app-viewport-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-page-scroll-reader {
+  overflow: hidden;
 }
 
 .screen {
@@ -357,10 +380,80 @@ h2 {
   background: linear-gradient(90deg, #fb533d, #e0d931 18%, #65d936);
 }
 
+.similar-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.similar-section h2 {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-title-3);
+}
+
+.similar-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.similar-book-button {
+  display: grid;
+  grid-template-columns: var(--control-height-lg) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-height-xl);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--tg-color-text);
+  background: var(--tg-color-surface);
+  text-align: left;
+}
+
+.similar-book-cover {
+  width: var(--control-height-lg);
+  aspect-ratio: 2 / 3;
+  box-shadow: none;
+}
+
+.similar-book-cover span {
+  font-size: var(--font-size-title-3);
+  line-height: var(--line-height-title-3);
+}
+
+.similar-book-copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.similar-book-copy strong,
+.similar-book-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-book-copy strong {
+  color: var(--tg-color-text);
+  font-size: var(--font-size-callout);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-callout);
+}
+
+.similar-book-copy small {
+  color: var(--tg-color-muted);
+  font-size: var(--font-size-footnote);
+  line-height: var(--line-height-footnote);
+}
+
 .primary-button,
 .text-button,
 .icon-button,
 .started-row,
+.similar-book-button,
 .subscription-plan {
   border: 0;
   cursor: pointer;
@@ -388,39 +481,97 @@ h2 {
 }
 
 .reader-screen {
+  display: flex;
+  flex-direction: column;
   width: min(760px, 100%);
+  height: 100%;
+  min-height: 0;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-5) calc(var(--nav-height) + var(--space-7));
+  padding: var(--space-3) var(--space-4) calc(var(--reader-bottom-reserve) + var(--space-2) + var(--safe-area-bottom));
   background: var(--tg-color-bg);
 }
 
+.reader-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+  margin-bottom: var(--space-3);
+}
+
+.reader-header .text-button {
+  padding: 0;
+  font-size: var(--font-size-subhead);
+  line-height: var(--line-height-subhead);
+}
+
+.reader-title-block {
+  min-width: 0;
+}
+
+.reader-header .muted {
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-footnote);
+  line-height: var(--line-height-footnote);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .reader-screen h1 {
-  font-size: var(--font-size-title-2);
-  line-height: var(--line-height-title-2);
+  overflow: hidden;
+  margin-bottom: 0;
+  font-size: var(--font-size-callout);
+  line-height: var(--line-height-callout);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chapter {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  column-width: var(--reader-page-width);
+  column-gap: var(--reader-page-gap);
   color: var(--tg-color-text);
   font-size: var(--reader-font-size);
   line-height: var(--reader-line-height);
+  transition: transform 160ms ease-out;
+  will-change: transform;
 }
 
 .chapter p {
-  margin-bottom: 1em;
+  margin-bottom: var(--space-3);
 }
 
 .reader-actions {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-top: var(--space-7);
+  flex: 0 0 auto;
+  min-height: var(--reader-action-height);
+  margin-top: var(--space-2);
+}
+
+.reader-page-count {
+  color: var(--tg-color-muted);
+  font-size: var(--font-size-footnote);
+  line-height: var(--line-height-footnote);
 }
 
 .icon-button {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: var(--reader-action-height);
+  height: var(--reader-action-height);
   border-radius: var(--radius-round);
   color: var(--tg-color-text);
   background: var(--color-surface-control);
@@ -431,9 +582,19 @@ h2 {
   border-top: 1px solid var(--color-border);
 }
 
-.profile-subscription-button {
+.profile-subscription-button,
+.profile-support-button {
   width: 100%;
+}
+
+.profile-subscription-button {
   margin-top: var(--space-3);
+}
+
+.profile-support-button {
+  min-height: var(--control-height-md);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-5);
 }
 
 .started-row {

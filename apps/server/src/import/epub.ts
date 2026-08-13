@@ -11,6 +11,7 @@ export type ImportEpubDirectoryInput = {
   db: DbClient;
   sourceDir: string;
   outputDir: string;
+  descriptionsFile?: string;
 };
 
 export type ImportSummary = {
@@ -44,6 +45,8 @@ type TocEntry = {
   title: string;
   src: string;
 };
+
+type BookDescriptions = Record<string, string>;
 
 export function shouldSkipChapterTitle(title: string): boolean {
   return ["cover", "информация о книге", "об авторе", "оглавление"].includes(title.trim().toLowerCase());
@@ -167,6 +170,25 @@ function countWords(html: string): number {
   return words?.length ?? 0;
 }
 
+async function loadBookDescriptions(descriptionsFile: string | undefined): Promise<BookDescriptions> {
+  if (!descriptionsFile) return {};
+
+  try {
+    const raw = await fs.readFile(descriptionsFile, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0)
+        .map(([bookId, description]) => [bookId, description.trim()])
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+}
+
 async function saveCover(zip: AdmZip, opf: ParsedOpf, bookOutputDir: string): Promise<string | null> {
   const coverItem =
     (opf.coverId ? opf.manifest.get(opf.coverId) : null) ??
@@ -188,6 +210,7 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
   await fs.mkdir(input.sourceDir, { recursive: true });
   await fs.mkdir(input.outputDir, { recursive: true });
 
+  const bookDescriptions = await loadBookDescriptions(input.descriptionsFile);
   const files = (await fs.readdir(input.sourceDir)).filter((file) => file.toLowerCase().endsWith(".epub"));
   const summary: ImportSummary = { importedBooks: 0, importedChapters: 0, skippedFiles: [] };
 
@@ -240,6 +263,7 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
       const coverPath = await saveCover(zip, opf, bookOutputDir);
       const chapterCount = importedChapters.length;
       const freeChapterLimit = calculateFreeChapterLimit(chapterCount);
+      const description = bookDescriptions[bookId] ?? (opf.language ? `Язык: ${opf.language}` : null);
 
       await input.db.book.upsert({
         where: { id: bookId },
@@ -247,7 +271,7 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
           id: bookId,
           title: opf.title,
           author: opf.author,
-          description: opf.language ? `Язык: ${opf.language}` : null,
+          description,
           coverPath,
           chapterCount,
           freeChapterLimit,
@@ -257,7 +281,7 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
         update: {
           title: opf.title,
           author: opf.author,
-          description: opf.language ? `Язык: ${opf.language}` : null,
+          description,
           coverPath,
           chapterCount,
           freeChapterLimit,

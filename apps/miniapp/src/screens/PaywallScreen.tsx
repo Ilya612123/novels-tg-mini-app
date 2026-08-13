@@ -1,13 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, Crown } from "lucide-react";
 import { publicSubscriptionPlans, type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
 
 export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: (planId: SubscriptionPlanId) => void }) {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(publicSubscriptionPlans[0]);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0 });
-  }, []);
 
   return (
     <main className="screen paywall-screen">

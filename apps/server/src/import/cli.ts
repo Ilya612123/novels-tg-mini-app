@@ -7,7 +7,8 @@ const root = process.cwd().endsWith(path.join("apps", "server")) ? path.resolve(
 const summary = await importEpubDirectory({
   db: prisma,
   sourceDir: path.join(root, "content/epub"),
-  outputDir: path.join(root, "content/imported")
+  outputDir: path.join(root, "content/imported"),
+  descriptionsFile: path.join(root, "content/book-descriptions.json")
 });
 
 console.log(`Импортировано книг: ${summary.importedBooks}`);

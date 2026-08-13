@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NovelScreen } from "./NovelScreen";
 import type { BookSummary } from "@novell-reader/shared";
@@ -28,6 +28,14 @@ const book: BookSummary = {
     ]
   },
   progress: null
+};
+
+const similarBook: BookSummary = {
+  ...book,
+  id: "book-2",
+  title: "Похожая новелла",
+  author: "Другой автор",
+  chapterCount: 24
 };
 
 describe("NovelScreen", () => {
@@ -83,5 +91,24 @@ describe("NovelScreen", () => {
     expect(screen.getByText("7.2 K")).toBeTruthy();
     expect(screen.getByText("91.7%")).toBeTruthy();
     expect(screen.getByText("6602")).toBeTruthy();
+  });
+
+  it("shows similar books and opens the selected recommendation", () => {
+    const openSimilar = vi.fn();
+
+    render(
+      <NovelScreen
+        book={book}
+        similarBooks={[similarBook]}
+        onBack={vi.fn()}
+        onRead={vi.fn()}
+        onOpenSimilar={openSimilar}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Похожее" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Похожая новелла/ }));
+
+    expect(openSimilar).toHaveBeenCalledWith("book-2");
   });
 });

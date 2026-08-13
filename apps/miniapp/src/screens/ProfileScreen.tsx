@@ -37,7 +37,7 @@ export function ProfileScreen({
         <button className="primary-button profile-subscription-button" onClick={onOpenPaywall} type="button">
           Купить подписку
         </button>
-        <button className="text-button" onClick={onOpenSupport} type="button">
+        <button className="text-button profile-support-button" onClick={onOpenSupport} type="button">
           Поддержка
         </button>
       </section>

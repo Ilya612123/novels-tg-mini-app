@@ -43,6 +43,24 @@ describe("miniapp design system", () => {
     expect(css).toMatch(/\.screen\s*{[^}]*padding:\s*var\(--space-5\) var\(--space-4\) calc\(var\(--nav-height\) \+ var\(--space-7\) \+ var\(--safe-area-bottom\)\)/s);
   });
 
+  it("lays out the reader as fixed-height pages instead of vertical scrolling text", () => {
+    expect(css).toContain("--reader-action-height: var(--control-height-sm)");
+    expect(css).toContain("--reader-bottom-reserve: 0px");
+    expect(css).toContain("--reader-page-gap: var(--space-4)");
+    expect(css).toContain("--reader-font-size: 16px");
+    expect(css).toContain("--reader-line-height: 1.5");
+    expect(css).toMatch(/\.app-page-scroll-reader\s*{[^}]*overflow:\s*hidden/s);
+    expect(css).toMatch(/\.reader-screen\s*{[^}]*display:\s*flex/s);
+    expect(css).toMatch(/\.reader-screen\s*{[^}]*height:\s*100%/s);
+    expect(css).toMatch(/\.reader-screen\s*{[^}]*padding:\s*var\(--space-3\) var\(--space-4\) calc\(var\(--reader-bottom-reserve\) \+ var\(--space-2\) \+ var\(--safe-area-bottom\)\)/s);
+    expect(css).toMatch(/\.reader-header\s*{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/s);
+    expect(css).toMatch(/\.reader-title-block\s*{[^}]*min-width:\s*0/s);
+    expect(css).toMatch(/\.chapter-viewport\s*{[^}]*overflow:\s*hidden/s);
+    expect(css).toMatch(/\.chapter\s*{[^}]*column-width:\s*var\(--reader-page-width\)/s);
+    expect(css).toMatch(/\.chapter\s*{[^}]*column-gap:\s*var\(--reader-page-gap\)/s);
+    expect(css).toMatch(/\.icon-button\s*{[^}]*width:\s*var\(--reader-action-height\)/s);
+  });
+
   it("keeps the fixed bottom navigation above cover rating badges", () => {
     expect(css).toContain("--z-cover-badge: 1");
     expect(css).toContain("--z-bottom-nav: 30");

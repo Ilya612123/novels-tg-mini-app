@@ -213,4 +213,66 @@ describe("EPUB import helpers", () => {
     expect(summary).toEqual({ importedBooks: 1, importedChapters: 2, skippedFiles: [] });
     expect(createdChapters.map((chapter) => chapter.number)).toEqual([1, 2]);
   });
+
+  it("uses configured book descriptions instead of language placeholders", async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "novell-reader-epub-"));
+    const sourceDir = path.join(tempDir, "epub");
+    const outputDir = path.join(tempDir, "imported");
+    const descriptionsFile = path.join(tempDir, "book-descriptions.json");
+    await fs.mkdir(sourceDir, { recursive: true });
+    await fs.writeFile(
+      descriptionsFile,
+      JSON.stringify({
+        "kniga-s-opisaniem": "Опасное притяжение, запретная близость и герой, который не привык отпускать свое."
+      }),
+      "utf8"
+    );
+
+    const zip = new AdmZip();
+    zip.addFile("META-INF/container.xml", Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="book.opf" media-type="application/oebps-package+xml" />
+  </rootfiles>
+</container>`));
+    zip.addFile("book.opf", Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Книга с описанием</dc:title>
+    <dc:language>ru</dc:language>
+  </metadata>
+  <manifest>
+    <item id="chapter1" href="Chapter1.html" media-type="application/xhtml+xml" />
+  </manifest>
+  <spine>
+    <itemref idref="chapter1" />
+  </spine>
+</package>`));
+    zip.addFile("Chapter1.html", Buffer.from("<html><body><h1>Глава 1</h1><p>Текст главы.</p></body></html>"));
+    await zip.writeZipPromise(path.join(sourceDir, "described.epub"));
+
+    const upsertInputs: Array<{ create: { description: string | null }; update: { description: string | null } }> = [];
+    const db = {
+      book: {
+        upsert: async (input: { create: { description: string | null }; update: { description: string | null } }) => {
+          upsertInputs.push(input);
+          return {};
+        }
+      },
+      chapter: {
+        deleteMany: async () => ({}),
+        createMany: async () => ({})
+      }
+    };
+
+    await importEpubDirectory({ db: db as never, sourceDir, outputDir, descriptionsFile });
+
+    const upsertInput = upsertInputs[0];
+    expect(upsertInput?.create.description).toBe(
+      "Опасное притяжение, запретная близость и герой, который не привык отпускать свое."
+    );
+    expect(upsertInput?.update.description).toBe(
+      "Опасное притяжение, запретная близость и герой, который не привык отпускать свое."
+    );
+  });
 });

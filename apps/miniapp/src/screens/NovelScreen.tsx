@@ -22,12 +22,16 @@ function formatReviewCount(count: number): string {
 
 export function NovelScreen({
   book,
+  similarBooks = [],
   onBack,
-  onRead
+  onRead,
+  onOpenSimilar
 }: {
   book: BookSummary;
+  similarBooks?: BookSummary[];
   onBack: () => void;
   onRead: (chapterNumber: number) => void;
+  onOpenSimilar?: (bookId: string) => void;
 }) {
   const chapterNumber = book.progress?.chapterNumber ?? 1;
   const language = book.language ?? languageFromDescription(book.description);
@@ -77,6 +81,24 @@ export function NovelScreen({
           ))}
         </div>
       </section>
+      {similarBooks.length > 0 && onOpenSimilar ? (
+        <section className="similar-section" aria-labelledby="similar-heading">
+          <h2 id="similar-heading">Похожее</h2>
+          <div className="similar-list">
+            {similarBooks.map((item) => (
+              <button className="similar-book-button" key={item.id} onClick={() => onOpenSimilar(item.id)} type="button">
+                <span className="similar-book-cover cover">
+                  {item.coverUrl ? <img src={item.coverUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                </span>
+                <span className="similar-book-copy">
+                  <strong>{item.title}</strong>
+                  <small>{item.author ?? "Автор не указан"}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
