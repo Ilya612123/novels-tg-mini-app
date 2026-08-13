@@ -1,6 +1,14 @@
 import type { BookSummary } from "@novell-reader/shared";
 
-export function ProfileScreen({ books, onContinue }: { books: BookSummary[]; onContinue: (book: BookSummary) => void }) {
+export function ProfileScreen({
+  books,
+  onContinue,
+  onOpenPaywall
+}: {
+  books: BookSummary[];
+  onContinue: (book: BookSummary) => void;
+  onOpenPaywall: () => void;
+}) {
   const started = books.filter((book) => book.progress);
 
   return (
@@ -24,6 +32,9 @@ export function ProfileScreen({ books, onContinue }: { books: BookSummary[]; onC
       <section className="profile-section">
         <h2>Доступ</h2>
         <p className="muted">Статус доступа появится после подключения платежей.</p>
+        <button className="primary-button profile-subscription-button" onClick={onOpenPaywall} type="button">
+          Купить подписку
+        </button>
       </section>
     </main>
   );

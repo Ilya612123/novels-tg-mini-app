@@ -7,6 +7,7 @@ import { getActiveAccess } from "../repositories/access.js";
 import { getBookById, getChapterByNumber, listPublishedBooks } from "../repositories/books.js";
 import { getProgressForBook, listProgressForUser } from "../repositories/progress.js";
 import { getReadableChapterState } from "./access.js";
+import { generateStaticBookRating } from "./ratings.js";
 
 function progressSummary(progress: ReadingProgress | null): ReadingProgressSummary | null {
   if (!progress) return null;
@@ -34,6 +35,7 @@ export async function listBooksForUser(db: DbClient, userId: string): Promise<Bo
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
     freeChapterLimit: book.freeChapterLimit,
+    rating: generateStaticBookRating(book.id),
     progress: progressSummary(progressByBook.get(book.id) ?? null)
   }));
 }
@@ -50,6 +52,7 @@ export async function getBookDetailForUser(db: DbClient, userId: string, bookId:
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
     freeChapterLimit: book.freeChapterLimit,
+    rating: generateStaticBookRating(book.id),
     progress: progressSummary(progress)
   };
 }

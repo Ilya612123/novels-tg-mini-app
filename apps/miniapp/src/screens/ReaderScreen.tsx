@@ -20,6 +20,10 @@ export function ReaderScreen({
   );
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [chapter.bookId, chapter.number]);
+
+  useEffect(() => {
     api.saveProgress(progressPayload).catch(console.error);
     api.analytics(`начал читать Главу ${chapter.number}`, { bookId: chapter.bookId }).catch(console.error);
   }, [chapter.bookId, chapter.number, progressPayload]);

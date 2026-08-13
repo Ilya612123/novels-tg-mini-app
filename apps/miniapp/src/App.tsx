@@ -16,7 +16,7 @@ type View =
   | { name: "profile" }
   | { name: "novel"; bookId: string }
   | { name: "reader"; bookId: string; chapter: ChapterDto }
-  | { name: "paywall"; bookId: string; chapterNumber: number };
+  | { name: "paywall"; bookId: string | null; chapterNumber: number | null; returnTo: "novel" | "profile" };
 
 type AppError = {
   status: number | null;
@@ -47,7 +47,7 @@ export function App() {
   }, []);
 
   const currentBook = useMemo(() => {
-    if (view.name === "novel" || view.name === "reader" || view.name === "paywall") {
+    if (view.name === "novel" || view.name === "reader" || (view.name === "paywall" && view.bookId)) {
       return books.find((book) => book.id === view.bookId) ?? null;
     }
     return null;
@@ -66,7 +66,7 @@ export function App() {
       const chapter = await api.chapter(bookId, chapterNumber);
       if (!chapter.canRead) {
         api.analytics("уперся в paywall", { bookId, chapterNumber }).catch(console.error);
-        setView({ name: "paywall", bookId, chapterNumber });
+        setView({ name: "paywall", bookId, chapterNumber, returnTo: "novel" });
         return;
       }
       setView({ name: "reader", bookId, chapter });
@@ -77,7 +77,7 @@ export function App() {
     }
   };
 
-  const activeTab: Tab = view.name === "profile" ? "profile" : "catalog";
+  const activeTab: Tab = view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile") ? "profile" : "catalog";
   const isTelegramAuthError = error?.status === 401;
 
   if (loading && books.length === 0) return <LoadingState />;
@@ -101,6 +101,10 @@ export function App() {
             api.analytics("продолжил чтение из профиля", { bookId: book.id }).catch(console.error);
             void openChapter(book.id, book.progress?.chapterNumber ?? 1);
           }}
+          onOpenPaywall={() => {
+            api.analytics("открыл paywall из профиля").catch(console.error);
+            setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
+          }}
         />
       )}
       {view.name === "novel" && currentBook && (
@@ -116,7 +120,13 @@ export function App() {
       )}
       {view.name === "paywall" && (
         <PaywallScreen
-          onBack={() => setView({ name: "novel", bookId: view.bookId })}
+          onBack={() => {
+            if (view.returnTo === "profile" || !view.bookId) {
+              setView({ name: "profile" });
+              return;
+            }
+            setView({ name: "novel", bookId: view.bookId });
+          }}
           onBuy={() => {
             api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber }).catch(console.error);
             api.createPayment().then((payment) => openInvoice(payment.invoiceLink)).catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));

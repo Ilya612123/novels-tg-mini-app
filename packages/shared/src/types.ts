@@ -5,14 +5,29 @@ export type ReadingProgressSummary = {
   updatedAt: string;
 };
 
+export type RatingDistributionRow = {
+  score: number;
+  count: number;
+  percent: number;
+};
+
+export type BookRatingSummary = {
+  averageScore: number;
+  reviewCount: number;
+  distribution: RatingDistributionRow[];
+};
+
 export type BookSummary = {
   id: string;
   title: string;
   author: string | null;
   description: string | null;
+  language?: string | null;
+  tags?: string[];
   coverUrl: string | null;
   chapterCount: number;
   freeChapterLimit: number;
+  rating: BookRatingSummary;
   progress: ReadingProgressSummary | null;
 };
 
