@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import { webhookCallback, type Bot } from "grammy";
@@ -17,6 +18,7 @@ export type ApiDeps = {
   config: AppConfig;
   db: DbClient;
   bot?: Bot;
+  contentRoot?: string;
   devWebhookRetryDelayMs?: number;
 };
 
@@ -80,10 +82,12 @@ function asyncRoute(handler: (req: Request, res: Response) => Promise<void>) {
 }
 
 export function createApiServer(deps: ApiDeps) {
+  const projectRoot = process.cwd().endsWith(path.join("apps", "server")) ? path.resolve(process.cwd(), "../..") : process.cwd();
+  const contentRoot = deps.contentRoot ?? path.join(projectRoot, "content/imported");
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
-  app.use("/content/imported", express.static("content/imported"));
+  app.use("/content/imported", express.static(contentRoot));
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -140,7 +144,7 @@ export function createApiServer(deps: ApiDeps) {
         throw new HttpError(400, "Некорректный номер главы");
       }
 
-      const chapter = await getChapterForUser(deps.db, user.id, req.params.bookId, chapterNumber);
+      const chapter = await getChapterForUser(deps.db, user.id, req.params.bookId, chapterNumber, contentRoot);
       if (!chapter) throw new HttpError(404, "Глава не найдена");
       if (!chapter.canRead) {
         res.status(402).json(chapter);

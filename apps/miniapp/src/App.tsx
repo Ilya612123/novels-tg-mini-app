@@ -25,6 +25,8 @@ type AppError = {
   message: string;
 };
 
+const supportUrl = "https://t.me/esimsmile_support";
+
 function toAppError(err: unknown, fallbackMessage: string): AppError {
   if (err instanceof ApiError) return { status: err.status, message: err.message };
   return { status: null, message: err instanceof Error ? err.message : fallbackMessage };
@@ -151,6 +153,10 @@ export function App() {
           onOpenPaywall={() => {
             api.analytics("открыл paywall из профиля").catch(console.error);
             setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
+          }}
+          onOpenSupport={() => {
+            api.analytics("открыл поддержку из профиля").catch(console.error);
+            openTelegramLink(supportUrl);
           }}
         />
       )}

@@ -3,11 +3,13 @@ import type { BookSummary } from "@novell-reader/shared";
 export function ProfileScreen({
   books,
   onContinue,
-  onOpenPaywall
+  onOpenPaywall,
+  onOpenSupport
 }: {
   books: BookSummary[];
   onContinue: (book: BookSummary) => void;
   onOpenPaywall: () => void;
+  onOpenSupport: () => void;
 }) {
   const started = books.filter((book) => book.progress);
 
@@ -34,6 +36,9 @@ export function ProfileScreen({
         <p className="muted">Статус доступа появится после подключения платежей.</p>
         <button className="primary-button profile-subscription-button" onClick={onOpenPaywall} type="button">
           Купить подписку
+        </button>
+        <button className="text-button" onClick={onOpenSupport} type="button">
+          Поддержка
         </button>
       </section>
     </main>

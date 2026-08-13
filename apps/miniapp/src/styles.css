@@ -79,6 +79,11 @@
   --control-height-lg: 56px;
   --control-height-xl: 64px;
   --nav-height: 84px;
+  --book-title-lines: 3;
+  --z-cover-badge: 1;
+  --z-paywall-buy-bar: 20;
+  --z-bottom-nav: 30;
+  --z-modal-backdrop: 60;
 
   --shadow-cover: 0 8px 24px rgb(0 0 0 / 28%);
   --shadow-badge: 0 4px 12px rgb(0 0 0 / 24%);
@@ -116,7 +121,7 @@ button {
 .screen {
   width: min(720px, 100%);
   margin: 0 auto;
-  padding: var(--space-5) var(--space-4) var(--space-7);
+  padding: var(--space-5) var(--space-4) calc(var(--nav-height) + var(--space-7) + var(--safe-area-bottom));
 }
 
 .screen-header {
@@ -159,6 +164,8 @@ h2 {
 }
 
 .book-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -193,7 +200,7 @@ h2 {
   position: absolute;
   top: var(--space-2);
   left: 0;
-  z-index: 1;
+  z-index: var(--z-cover-badge);
   min-width: var(--control-height-sm);
   padding: var(--space-1) var(--space-2);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -208,9 +215,15 @@ h2 {
 
 .book-card-text {
   padding-top: var(--space-2);
+  min-height: calc((var(--line-height-callout) * var(--book-title-lines)) + var(--space-1) + var(--line-height-footnote));
 }
 
 .book-card h3 {
+  display: -webkit-box;
+  min-height: calc(var(--line-height-callout) * var(--book-title-lines));
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--book-title-lines);
   margin-bottom: var(--space-1);
   font-size: var(--font-size-callout);
   font-weight: var(--font-weight-semibold);
@@ -599,7 +612,7 @@ h2 {
   right: 0;
   bottom: var(--nav-height);
   left: 0;
-  z-index: 20;
+  z-index: var(--z-paywall-buy-bar);
   padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-area-bottom));
   background: linear-gradient(180deg, rgb(24 24 24 / 0%), rgb(24 24 24 / 92%) 32%);
 }
@@ -615,9 +628,9 @@ h2 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-modal-backdrop);
   display: grid;
-  align-items: start;
+  align-items: center;
   justify-items: center;
   padding: var(--space-7) var(--space-5);
   background: rgb(8 12 20 / 58%);
@@ -678,6 +691,7 @@ h2 {
   right: 0;
   bottom: 0;
   left: 0;
+  z-index: var(--z-bottom-nav);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);

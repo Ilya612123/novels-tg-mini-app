@@ -1,8 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 describe("App", () => {
+  beforeEach(() => {
+    vi.stubGlobal("scrollTo", vi.fn());
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -107,6 +111,81 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Купить подписку · 299₽" })).toBeTruthy();
   });
 
+  it("scrolls to the top when a locked next chapter opens the paywall", async () => {
+    const scrollTo = vi.mocked(window.scrollTo);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "book-1",
+                  title: "Тестовая новелла",
+                  author: "Автор",
+                  description: "Описание",
+                  coverUrl: null,
+                  chapterCount: 10,
+                  freeChapterLimit: 3,
+                  rating: {
+                    averageScore: 9.14,
+                    reviewCount: 2400,
+                    distribution: [
+                      { score: 10, count: 600, percent: 25 },
+                      { score: 9, count: 1608, percent: 67 },
+                      { score: 8, count: 96, percent: 4 },
+                      { score: 7, count: 24, percent: 1 },
+                      { score: 6, count: 24, percent: 1 },
+                      { score: 5, count: 12, percent: 0.5 },
+                      { score: 4, count: 12, percent: 0.5 },
+                      { score: 3, count: 12, percent: 0.5 },
+                      { score: 2, count: 6, percent: 0.3 },
+                      { score: 1, count: 6, percent: 0.3 }
+                    ]
+                  },
+                  progress: null
+                }
+              ]),
+              { status: 200 }
+            )
+          );
+        }
+        if (url.endsWith("/api/books/book-1/chapters/1")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                id: "chapter-1",
+                bookId: "book-1",
+                number: 1,
+                title: "Глава 1",
+                html: "<p>Текст главы</p>",
+                canRead: true
+              }),
+              { status: 200 }
+            )
+          );
+        }
+        if (url.endsWith("/api/books/book-1/chapters/2")) {
+          return Promise.resolve(new Response(JSON.stringify({ canRead: false, reason: "paywall" }), { status: 402 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Тестовая новелла"));
+    fireEvent.click(await screen.findByText("Читать"));
+    await screen.findByText("Глава 1");
+    scrollTo.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
+
+    await screen.findByText("Подписка");
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0 });
+  });
+
   it("opens the subscription paywall from the profile", async () => {
     vi.stubGlobal(
       "fetch",
@@ -134,6 +213,27 @@ describe("App", () => {
     expect(screen.getByText("1499₽")).toBeTruthy();
     expect(screen.getByText("2999₽")).toBeTruthy();
     expect(screen.getAllByText(/Скидка/).length).toBeGreaterThan(0);
+  });
+
+  it("opens the support account from the profile", async () => {
+    const openTelegramLink = vi.fn();
+    vi.stubGlobal("Telegram", { WebApp: { openTelegramLink } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(screen.getByRole("button", { name: "Поддержка" }));
+
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/esimsmile_support");
   });
 
   it("creates payment for the selected subscription plan", async () => {

@@ -27,6 +27,7 @@ type ManifestItem = {
 
 type SpineItem = {
   idref: string;
+  linear: string | null;
 };
 
 type ParsedOpf = {
@@ -45,7 +46,7 @@ type TocEntry = {
 };
 
 export function shouldSkipChapterTitle(title: string): boolean {
-  return ["информация о книге", "об авторе", "оглавление"].includes(title.trim().toLowerCase());
+  return ["cover", "информация о книге", "об авторе", "оглавление"].includes(title.trim().toLowerCase());
 }
 
 export function extractChapterNumber(title: string): number | null {
@@ -54,7 +55,12 @@ export function extractChapterNumber(title: string): number | null {
 }
 
 function normalizeZipPath(...parts: string[]): string {
-  return parts.join("/").replaceAll("\\", "/").replace(/\/+/g, "/").replace(/^\.\//, "");
+  return parts
+    .filter(Boolean)
+    .join("/")
+    .replaceAll("\\", "/")
+    .replace(/\/+/g, "/")
+    .replace(/^\.?\//, "");
 }
 
 function textOf($: cheerio.CheerioAPI, selector: string): string | null {
@@ -104,8 +110,9 @@ function parseOpf(zip: AdmZip, opfPath: string): ParsedOpf {
 
   const spine: SpineItem[] = [];
   $("spine itemref").each((_, element) => {
-    const idref = $(element).attr("idref");
-    if (idref) spine.push({ idref });
+    const item = $(element);
+    const idref = item.attr("idref");
+    if (idref) spine.push({ idref, linear: item.attr("linear") ?? null });
   });
 
   return {
@@ -205,6 +212,8 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
       }> = [];
 
       for (const spineItem of opf.spine) {
+        if (spineItem.linear?.toLowerCase() === "no") continue;
+
         const manifestItem = opf.manifest.get(spineItem.idref);
         if (!manifestItem || manifestItem.mediaType !== "application/xhtml+xml") continue;
 
@@ -213,10 +222,10 @@ export async function importEpubDirectory(input: ImportEpubDirectoryInput): Prom
         const xhtml = readZipText(zip, entryPath);
         const fallbackTitle = `Глава ${importedChapters.length + 1}`;
         const title = tocEntry?.title ?? chapterTitleFromHtml(xhtml, fallbackTitle);
-        if (shouldSkipChapterTitle(title)) continue;
+        if (shouldSkipChapterTitle(title) || title.trim().toLowerCase() === opf.title.trim().toLowerCase()) continue;
 
         const sanitizedHtml = sanitizeChapterHtml(xhtml);
-        const chapterNumber = extractChapterNumber(title) ?? importedChapters.length + 1;
+        const chapterNumber = importedChapters.length + 1;
         const relativeContentPath = path.join(bookId, "chapters", `${chapterNumber}.html`);
         await fs.writeFile(path.join(input.outputDir, relativeContentPath), sanitizedHtml, "utf8");
         importedChapters.push({

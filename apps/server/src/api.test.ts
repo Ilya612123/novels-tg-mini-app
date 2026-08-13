@@ -62,6 +62,15 @@ describe("createApiServer", () => {
     expect(res.body[0].title).toBe("Компенсация за первую любовь");
   });
 
+  it("serves imported cover files from the configured content root", async () => {
+    await fs.writeFile(path.join(contentDir, "book-1", "cover.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+    const app = createApiServer({ config, db: testDb.db, contentRoot: contentDir });
+
+    const res = await request(app).get("/content/imported/book-1/cover.jpg").expect(200);
+
+    expect(res.headers["content-type"]).toContain("image/jpeg");
+  });
+
   it("returns paywall for paid chapter without access", async () => {
     const app = createApiServer({ config, db: testDb.db });
     const res = await request(app)
