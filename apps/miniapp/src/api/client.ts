@@ -1,4 +1,4 @@
-import type { BookSummary, ChapterDto } from "@novell-reader/shared";
+import type { BookSummary, ChapterDto, PaywallWinbackOffer, SubscriptionPlanId } from "@novell-reader/shared";
 import { getTelegramInitData } from "../telegram";
 
 export class ApiError extends Error {
@@ -33,6 +33,7 @@ async function request<T>(path: string, options: ApiRequestOptions = {}): Promis
 
 export type LockedChapter = { canRead: false; reason: "paywall" };
 export type PaymentResponse = { invoiceLink: string; providerPayload: string };
+export type PaywallWinbackOfferResponse = { offer: PaywallWinbackOffer | null };
 
 export const api = {
   books: () => request<BookSummary[]>("/api/books"),
@@ -43,5 +44,7 @@ export const api = {
     request("/api/progress", { method: "POST", body: JSON.stringify(body) }),
   analytics: (label: string, metadata?: unknown) =>
     request("/api/analytics", { method: "POST", body: JSON.stringify({ label, metadata }) }),
-  createPayment: () => request<PaymentResponse>("/api/payments/create", { method: "POST" })
+  nextPaywallWinbackOffer: () => request<PaywallWinbackOfferResponse>("/api/paywall/winback-offers/next", { method: "POST" }),
+  createPayment: (planId: SubscriptionPlanId) =>
+    request<PaymentResponse>("/api/payments/create", { method: "POST", body: JSON.stringify({ planId }) })
 };

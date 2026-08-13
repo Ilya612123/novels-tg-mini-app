@@ -72,6 +72,75 @@ describe("createApiServer", () => {
     expect(res.body).toEqual({ canRead: false, reason: "paywall" });
   });
 
+  it("creates a Telegram Stars invoice for the selected subscription plan", async () => {
+    const createInvoiceLink = vi.fn().mockResolvedValue("https://t.me/invoice");
+    const app = createApiServer({
+      config,
+      db: testDb.db,
+      bot: { api: { createInvoiceLink }, isRunning: () => false } as unknown as Bot
+    });
+
+    await request(app)
+      .post("/api/payments/create")
+      .set("x-dev-telegram-user-id", "5100586818")
+      .send({ planId: "four-months" })
+      .expect(200);
+
+    expect(createInvoiceLink).toHaveBeenCalledWith(
+      "Доступ к новеллам на 4 месяца",
+      "Откройте продолжение всех новелл на 4 месяца.",
+      expect.any(String),
+      "",
+      "XTR",
+      [{ label: "4 месяца доступа", amount: 819 }]
+    );
+    await expect(testDb.db.payment.findFirstOrThrow()).resolves.toMatchObject({
+      planId: "four-months",
+      starsAmount: 819,
+      accessDays: 120
+    });
+  });
+
+  it("creates a discounted one-month Telegram Stars invoice for a winback plan", async () => {
+    const createInvoiceLink = vi.fn().mockResolvedValue("https://t.me/invoice");
+    const app = createApiServer({
+      config,
+      db: testDb.db,
+      bot: { api: { createInvoiceLink }, isRunning: () => false } as unknown as Bot
+    });
+
+    await request(app)
+      .post("/api/payments/create")
+      .set("x-dev-telegram-user-id", "5100586818")
+      .send({ planId: "month-50-off" })
+      .expect(200);
+
+    expect(createInvoiceLink).toHaveBeenCalledWith(
+      "Доступ к новеллам на 30 дней со скидкой 50%",
+      "Откройте продолжение всех новелл на 30 дней со скидкой 50%.",
+      expect.any(String),
+      "",
+      "XTR",
+      [{ label: "30 дней доступа со скидкой 50%", amount: 149 }]
+    );
+    await expect(testDb.db.payment.findFirstOrThrow()).resolves.toMatchObject({
+      planId: "month-50-off",
+      starsAmount: 149,
+      accessDays: 30
+    });
+  });
+
+  it("returns each discounted paywall winback offer only once per user", async () => {
+    const app = createApiServer({ config, db: testDb.db });
+    const first = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
+    const second = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
+    const third = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
+
+    expect(first.body.offer).toMatchObject({ id: "month-50-off", kind: "discount", planId: "month-50-off" });
+    expect(second.body.offer).toMatchObject({ id: "month-75-off", kind: "discount", planId: "month-75-off" });
+    expect(third.body.offer).toBeNull();
+  });
+
   it("sets Telegram webhook and runtime Mini App URL in local dev", async () => {
     const setWebhook = vi.fn().mockResolvedValue(true);
     const localConfig = { ...config, BOT_MODE: "webhook" as const };

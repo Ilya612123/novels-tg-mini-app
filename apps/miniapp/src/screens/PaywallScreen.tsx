@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { Check, Crown } from "lucide-react";
+import { publicSubscriptionPlans, type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
 
-const plans = [
-  { title: "Месяц", price: "299₽", period: "1 месяц", oldPrice: null, discount: null, badge: null },
-  { title: "4 месяца", price: "819₽", period: "205₽/мес", oldPrice: "1196₽", discount: "Скидка 31%", badge: "Лучший выбор" },
-  { title: "Полгода", price: "1499₽", period: "250₽/мес", oldPrice: "1794₽", discount: "Скидка 16%", badge: null },
-  { title: "Год", price: "2999₽", period: "250₽/мес", oldPrice: "3588₽", discount: "Скидка 16%", badge: "Максимум доступа" }
-];
-
-export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: () => void }) {
-  const [selectedPlan, setSelectedPlan] = useState(plans[0]);
+export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: (planId: SubscriptionPlanId) => void }) {
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(publicSubscriptionPlans[0]);
 
   return (
     <main className="screen paywall-screen">
@@ -21,7 +15,7 @@ export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: ()
       </header>
 
       <section className="subscription-plans" role="radiogroup" aria-label="Тарифы подписки">
-        {plans.map((plan) => (
+        {publicSubscriptionPlans.map((plan) => (
           <label className={`subscription-plan${selectedPlan.title === plan.title ? " subscription-plan-selected" : ""}`} key={plan.title}>
             <input
               checked={selectedPlan.title === plan.title}
@@ -38,7 +32,7 @@ export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: ()
             </span>
             <span className="subscription-price">
               {plan.oldPrice && <small>{plan.oldPrice}</small>}
-              <strong>{plan.price}</strong>
+              <strong>{plan.priceLabel}</strong>
             </span>
             <span className="subscription-radio-mark" aria-hidden="true" />
           </label>
@@ -55,8 +49,8 @@ export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: ()
       </div>
 
       <div className="paywall-buy-bar">
-        <button className="primary-button paywall-buy-button" onClick={onBuy} type="button">
-          Купить подписку · {selectedPlan.price}
+        <button className="primary-button paywall-buy-button" onClick={() => onBuy(selectedPlan.id)} type="button">
+          Купить подписку · {selectedPlan.priceLabel}
         </button>
       </div>
     </main>

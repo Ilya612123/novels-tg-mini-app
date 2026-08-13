@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TestDb } from "../test/db.js";
 import { createTestDb } from "../test/db.js";
-import { extendAccessByThirtyDays, getActiveAccess } from "./access.js";
+import { extendAccessByDays, extendAccessByThirtyDays, getActiveAccess } from "./access.js";
 
 let testDb: TestDb;
 
@@ -29,5 +29,12 @@ describe("access repository", () => {
     const access = await extendAccessByThirtyDays(testDb.db, "5100586818", now);
 
     expect(access.subscriptionUntil.toISOString()).toBe("2026-10-10T09:00:00.000Z");
+  });
+
+  it("extends by the selected plan duration", async () => {
+    const now = new Date("2026-08-11T09:00:00.000Z");
+    const access = await extendAccessByDays(testDb.db, "5100586818", 120, now);
+
+    expect(access.subscriptionUntil.toISOString()).toBe("2026-12-09T09:00:00.000Z");
   });
 });

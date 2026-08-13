@@ -61,7 +61,9 @@ const SCHEMA_SQL = [
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "providerPayload" TEXT NOT NULL,
+    "planId" TEXT NOT NULL DEFAULT 'month',
     "starsAmount" INTEGER NOT NULL,
+    "accessDays" INTEGER NOT NULL DEFAULT 30,
     "status" TEXT NOT NULL,
     "rawPayload" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -79,10 +81,18 @@ const SCHEMA_SQL = [
     "flushedAt" DATETIME,
     CONSTRAINT "AnalyticsEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
+  `CREATE TABLE "PaywallWinbackImpression" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "offerId" TEXT NOT NULL,
+    "shownAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PaywallWinbackImpression_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
   `CREATE UNIQUE INDEX "Chapter_bookId_number_key" ON "Chapter"("bookId", "number")`,
   `CREATE UNIQUE INDEX "ReadingProgress_userId_bookId_key" ON "ReadingProgress"("userId", "bookId")`,
   `CREATE UNIQUE INDEX "Payment_providerPayload_key" ON "Payment"("providerPayload")`,
-  `CREATE INDEX "AnalyticsEvent_flushedAt_occurredAt_idx" ON "AnalyticsEvent"("flushedAt", "occurredAt")`
+  `CREATE INDEX "AnalyticsEvent_flushedAt_occurredAt_idx" ON "AnalyticsEvent"("flushedAt", "occurredAt")`,
+  `CREATE UNIQUE INDEX "PaywallWinbackImpression_userId_offerId_key" ON "PaywallWinbackImpression"("userId", "offerId")`
 ];
 
 export async function createTestDb(): Promise<TestDb> {

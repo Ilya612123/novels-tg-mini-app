@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import cors from "cors";
 import { webhookCallback, type Bot } from "grammy";
 import { z } from "zod";
+import { subscriptionPlans, type SubscriptionPlanId } from "@novell-reader/shared";
 import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db.js";
 import { requireTelegramUser } from "./auth.js";
@@ -10,6 +11,7 @@ import { listBooksForUser, getBookDetailForUser, getChapterForUser } from "./ser
 import { saveProgress } from "./services/progress.js";
 import { createAnalyticsEvent } from "./services/analytics.js";
 import { createAccessInvoiceLink } from "./services/payments.js";
+import { reserveNextPaywallWinbackOffer } from "./repositories/paywallWinback.js";
 
 export type ApiDeps = {
   config: AppConfig;
@@ -28,6 +30,12 @@ const ProgressSchema = z.object({
 const AnalyticsSchema = z.object({
   label: z.string().min(1),
   metadata: z.unknown().optional()
+});
+
+const subscriptionPlanIds = subscriptionPlans.map((plan) => plan.id) as [SubscriptionPlanId, ...SubscriptionPlanId[]];
+
+const PaymentCreateSchema = z.object({
+  planId: z.enum(subscriptionPlanIds)
 });
 
 const DevWebhookSetupSchema = z.object({
@@ -171,8 +179,18 @@ export function createApiServer(deps: ApiDeps) {
     "/api/payments/create",
     asyncRoute(async (req, res) => {
       const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
+      const body = PaymentCreateSchema.parse(req.body);
       if (!deps.bot) throw new HttpError(503, "Бот недоступен для создания платежа");
-      res.json(await createAccessInvoiceLink({ bot: deps.bot, db: deps.db, config: deps.config, userId: user.id }));
+      res.json(await createAccessInvoiceLink({ bot: deps.bot, db: deps.db, userId: user.id, planId: body.planId }));
+    })
+  );
+
+  app.post(
+    "/api/paywall/winback-offers/next",
+    asyncRoute(async (req, res) => {
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
+      const offer = await reserveNextPaywallWinbackOffer(deps.db, user.id);
+      res.json({ offer });
     })
   );
 

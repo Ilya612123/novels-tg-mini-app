@@ -6,7 +6,9 @@ export async function createPendingPayment(
   input: {
     userId: string;
     providerPayload: string;
+    planId: string;
     starsAmount: number;
+    accessDays: number;
   }
 ): Promise<Payment> {
   return db.payment.upsert({
@@ -14,7 +16,9 @@ export async function createPendingPayment(
     create: {
       userId: input.userId,
       providerPayload: input.providerPayload,
+      planId: input.planId,
       starsAmount: input.starsAmount,
+      accessDays: input.accessDays,
       status: "pending"
     },
     update: {}

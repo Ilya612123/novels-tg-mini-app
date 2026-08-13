@@ -18,6 +18,7 @@ model TelegramUser {
   access          UserAccess?
   payments        Payment[]
   analyticsEvents AnalyticsEvent[]
+  paywallWinbackImpressions PaywallWinbackImpression[]
 }
 
 model Book {
@@ -74,7 +75,9 @@ model Payment {
   id              String       @id @default(cuid())
   userId          String
   providerPayload String       @unique
+  planId          String       @default("month")
   starsAmount     Int
+  accessDays      Int          @default(30)
   status          String
   rawPayload      String?
   createdAt       DateTime     @default(now())
@@ -94,4 +97,14 @@ model AnalyticsEvent {
   user       TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([flushedAt, occurredAt])
+}
+
+model PaywallWinbackImpression {
+  id      String       @id @default(cuid())
+  userId  String
+  offerId String
+  shownAt DateTime     @default(now())
+  user    TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offerId])
 }

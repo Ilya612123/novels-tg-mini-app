@@ -1,28 +1,34 @@
 import type { Bot } from "grammy";
-import type { AppConfig } from "../config.js";
+import { findSubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
 import type { DbClient } from "../db.js";
 import { createPendingPayment } from "../repositories/payments.js";
+import { HttpError } from "../httpErrors.js";
 
 export async function createAccessInvoiceLink(input: {
   bot: Bot;
   db: DbClient;
-  config: AppConfig;
   userId: string;
+  planId: SubscriptionPlanId;
 }): Promise<{ invoiceLink: string; providerPayload: string }> {
+  const plan = findSubscriptionPlan(input.planId);
+  if (!plan) throw new HttpError(400, "Неизвестный тариф подписки");
+
   const providerPayload = `access:${input.userId}:${Date.now()}`;
   await createPendingPayment(input.db, {
     userId: input.userId,
     providerPayload,
-    starsAmount: input.config.STARS_ACCESS_PRICE
+    planId: plan.id,
+    accessDays: plan.durationDays,
+    starsAmount: plan.starsAmount
   });
 
   const invoiceLink = await input.bot.api.createInvoiceLink(
-    "Доступ к новеллам на 30 дней",
-    "Откройте продолжение всех новелл на 30 дней.",
+    plan.invoiceTitle,
+    plan.invoiceDescription,
     providerPayload,
     "",
     "XTR",
-    [{ label: "30 дней доступа", amount: input.config.STARS_ACCESS_PRICE }]
+    [{ label: plan.invoiceLabel, amount: plan.starsAmount }]
   );
 
   return { invoiceLink, providerPayload };

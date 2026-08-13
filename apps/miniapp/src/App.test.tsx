@@ -135,4 +135,101 @@ describe("App", () => {
     expect(screen.getByText("2999₽")).toBeTruthy();
     expect(screen.getAllByText(/Скидка/).length).toBeGreaterThan(0);
   });
+
+  it("creates payment for the selected subscription plan", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      if (url.endsWith("/api/payments/create")) {
+        return Promise.resolve(new Response(JSON.stringify({ invoiceLink: "https://t.me/invoice", providerPayload: "payload" }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("Telegram", { WebApp: { openInvoice: vi.fn() } });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(await screen.findByText("Купить подписку"));
+    fireEvent.click(screen.getByRole("radio", { name: /4 месяца/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 819₽" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/payments/create",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ planId: "four-months" })
+        })
+      )
+    );
+  });
+
+  it("shows paywall winback popups after closing the Telegram invoice", async () => {
+    const openTelegramLink = vi.fn();
+    const invoiceCallbacks: Array<(status: string) => void> = [];
+    const openInvoice = vi.fn((_url: string, callback?: (status: string) => void) => {
+      if (callback) invoiceCallbacks.push(callback);
+    });
+    const winbackResponses = [
+      { offer: { id: "month-50-off", kind: "discount", title: "1 месяц со скидкой 50%", body: "Продолжите читать дешевле.", buttonLabel: "Купить за 149 Stars", planId: "month-50-off" } },
+      { offer: { id: "month-75-off", kind: "discount", title: "1 месяц со скидкой 75%", body: "Последнее предложение.", buttonLabel: "Купить за 75 Stars", planId: "month-75-off" } },
+      { offer: null }
+    ];
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      if (url.endsWith("/api/paywall/winback-offers/next")) {
+        return Promise.resolve(new Response(JSON.stringify(winbackResponses.shift()), { status: 200 }));
+      }
+      if (url.endsWith("/api/payments/create")) {
+        return Promise.resolve(new Response(JSON.stringify({ invoiceLink: "https://t.me/invoice", providerPayload: "payload" }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("Telegram", { WebApp: { openInvoice, openTelegramLink } });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(await screen.findByText("Купить подписку"));
+    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+
+    await waitFor(() => expect(openInvoice).toHaveBeenCalledWith("https://t.me/invoice", expect.any(Function)));
+    invoiceCallbacks[0]?.("cancelled");
+    expect(await screen.findByText("Не хватает Stars?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Купить Stars в PremiumBot" }));
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PremiumBot");
+
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
+    expect(await screen.findByText("1 месяц со скидкой 50%")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Купить за 149 Stars" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/payments/create",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ planId: "month-50-off" })
+        })
+      )
+    );
+    expect(openInvoice).toHaveBeenLastCalledWith("https://t.me/invoice", expect.any(Function));
+
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
+    expect(await screen.findByText("1 месяц со скидкой 75%")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
+    await waitFor(() => expect(screen.getByText("Здесь появятся книги, которые вы начали читать.")).toBeTruthy());
+
+    fireEvent.click(screen.getByText("Купить подписку"));
+    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+    await waitFor(() => expect(openInvoice).toHaveBeenCalledTimes(3));
+    invoiceCallbacks[2]?.("cancelled");
+    expect(await screen.findByText("Не хватает Stars?")).toBeTruthy();
+  });
 });

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import type { BookSummary, ChapterDto } from "@novell-reader/shared";
+import { starsHelpWinbackOffer, type BookSummary, type ChapterDto } from "@novell-reader/shared";
+import type { PaywallWinbackOffer } from "@novell-reader/shared";
 import { ApiError, api } from "./api/client";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
 import { LoadingState } from "./components/LoadingState";
+import { PaywallWinbackModal } from "./components/PaywallWinbackModal";
 import { CatalogScreen } from "./screens/CatalogScreen";
 import { NovelScreen } from "./screens/NovelScreen";
 import { PaywallScreen } from "./screens/PaywallScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { ReaderScreen } from "./screens/ReaderScreen";
-import { openInvoice } from "./telegram";
+import { openInvoice, openTelegramLink } from "./telegram";
 
 type View =
   | { name: "catalog" }
@@ -33,6 +35,7 @@ export function App() {
   const [view, setView] = useState<View>({ name: "catalog" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
+  const [winbackOffer, setWinbackOffer] = useState<PaywallWinbackOffer | null>(null);
 
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
@@ -80,6 +83,50 @@ export function App() {
   const activeTab: Tab = view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile") ? "profile" : "catalog";
   const isTelegramAuthError = error?.status === 401;
 
+  const leavePaywall = () => {
+    if (view.name !== "paywall") return;
+    if (view.returnTo === "profile" || !view.bookId) {
+      setView({ name: "profile" });
+      return;
+    }
+    setView({ name: "novel", bookId: view.bookId });
+  };
+
+  const showNextWinbackOfferOrLeave = () => {
+    if (view.name !== "paywall") return;
+    api
+      .nextPaywallWinbackOffer()
+      .then(({ offer }) => {
+        if (offer) {
+          setWinbackOffer(offer);
+          return;
+        }
+        setWinbackOffer(null);
+        leavePaywall();
+      })
+      .catch(() => {
+        setWinbackOffer(null);
+        leavePaywall();
+      });
+  };
+
+  const showNextWinbackOfferAfterInvoice = (status: string) => {
+    if (status === "paid") return;
+    setWinbackOffer(starsHelpWinbackOffer);
+  };
+
+  const handleWinbackAction = () => {
+    if (!winbackOffer) return;
+    if (winbackOffer.kind === "premium-bot") {
+      openTelegramLink("https://t.me/PremiumBot");
+      return;
+    }
+    api
+      .createPayment(winbackOffer.planId)
+      .then((payment) => openInvoice(payment.invoiceLink, showNextWinbackOfferAfterInvoice))
+      .catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
+  };
+
   if (loading && books.length === 0) return <LoadingState />;
   if (isTelegramAuthError) {
     return (
@@ -120,19 +167,17 @@ export function App() {
       )}
       {view.name === "paywall" && (
         <PaywallScreen
-          onBack={() => {
-            if (view.returnTo === "profile" || !view.bookId) {
-              setView({ name: "profile" });
-              return;
-            }
-            setView({ name: "novel", bookId: view.bookId });
-          }}
-          onBuy={() => {
-            api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber }).catch(console.error);
-            api.createPayment().then((payment) => openInvoice(payment.invoiceLink)).catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
+          onBack={leavePaywall}
+          onBuy={(planId) => {
+            api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber, planId }).catch(console.error);
+            api
+              .createPayment(planId)
+              .then((payment) => openInvoice(payment.invoiceLink, showNextWinbackOfferAfterInvoice))
+              .catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
           }}
         />
       )}
+      {winbackOffer && <PaywallWinbackModal offer={winbackOffer} onAction={handleWinbackAction} onClose={showNextWinbackOfferOrLeave} />}
       <BottomNav
         activeTab={activeTab}
         onChange={(tab) => {

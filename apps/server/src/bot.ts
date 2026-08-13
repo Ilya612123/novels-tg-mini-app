@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard } from "grammy";
 import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db.js";
-import { extendAccessByThirtyDays } from "./repositories/access.js";
+import { extendAccessByDays } from "./repositories/access.js";
 import { recordAnalyticsEvent } from "./repositories/analytics.js";
 import { markPaymentPaid } from "./repositories/payments.js";
 import { upsertTelegramUser } from "./repositories/users.js";
@@ -54,7 +54,7 @@ export function createBot(deps: BotDeps): Bot {
     });
 
     if (!markedPayment) return;
-    await extendAccessByThirtyDays(deps.db, String(from.id));
+    await extendAccessByDays(deps.db, String(from.id), markedPayment.accessDays);
     await recordAnalyticsEvent(deps.db, {
       userId: String(from.id),
       username: from.username ?? null,
