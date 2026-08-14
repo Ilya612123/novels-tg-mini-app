@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import AdmZip from "adm-zip";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { extractChapterNumber, importEpubDirectory, shouldSkipChapterTitle } from "./epub.js";
 
@@ -274,5 +275,73 @@ describe("EPUB import helpers", () => {
     expect(upsertInput?.update.description).toBe(
       "Опасное притяжение, запретная близость и герой, который не привык отпускать свое."
     );
+  });
+
+  it("converts imported PNG covers to WebP files and stores the optimized cover path", async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "novell-reader-epub-"));
+    const sourceDir = path.join(tempDir, "epub");
+    const outputDir = path.join(tempDir, "imported");
+    await fs.mkdir(sourceDir, { recursive: true });
+
+    const zip = new AdmZip();
+    zip.addFile("META-INF/container.xml", Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="book.opf" media-type="application/oebps-package+xml" />
+  </rootfiles>
+</container>`));
+    zip.addFile("book.opf", Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Web Cover</dc:title>
+    <dc:language>ru</dc:language>
+    <meta name="cover" content="cover-image" />
+  </metadata>
+  <manifest>
+    <item id="cover-image" href="cover.png" media-type="image/png" />
+    <item id="chapter1" href="Chapter1.html" media-type="application/xhtml+xml" />
+  </manifest>
+  <spine>
+    <itemref idref="chapter1" />
+  </spine>
+</package>`));
+    const coverPng = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: "#f43f5e"
+      }
+    })
+      .png()
+      .toBuffer();
+    zip.addFile("cover.png", coverPng);
+    zip.addFile("Chapter1.html", Buffer.from("<html><body><h1>Глава 1</h1><p>Текст главы.</p></body></html>"));
+    await zip.writeZipPromise(path.join(sourceDir, "web-cover.epub"));
+
+    const upsertInputs: Array<{ create: { coverPath: string | null }; update: { coverPath: string | null } }> = [];
+    const db = {
+      book: {
+        upsert: async (input: { create: { coverPath: string | null }; update: { coverPath: string | null } }) => {
+          upsertInputs.push(input);
+          return {};
+        }
+      },
+      chapter: {
+        deleteMany: async () => ({}),
+        createMany: async () => ({})
+      }
+    };
+
+    const summary = await importEpubDirectory({ db: db as never, sourceDir, outputDir });
+
+    expect(summary).toEqual({ importedBooks: 1, importedChapters: 1, skippedFiles: [] });
+    expect(upsertInputs[0]?.create.coverPath).toBe(path.join("web-cover", "cover.webp"));
+    expect(upsertInputs[0]?.update.coverPath).toBe(path.join("web-cover", "cover.webp"));
+    await expect(fs.access(path.join(outputDir, "web-cover", "cover.png"))).rejects.toThrow();
+
+    const cover = await fs.readFile(path.join(outputDir, "web-cover", "cover.webp"));
+    expect(cover.subarray(0, 4).toString("ascii")).toBe("RIFF");
+    expect(cover.subarray(8, 12).toString("ascii")).toBe("WEBP");
   });
 });

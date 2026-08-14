@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { starsHelpWinbackOffer, type BookSummary, type ChapterDto } from "@novell-reader/shared";
-import type { PaywallWinbackOffer } from "@novell-reader/shared";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import type { BookSummary, ChapterDto, PaywallWinbackOffer } from "@novell-reader/shared";
 import { ApiError, api } from "./api/client";
-import { BottomNav, type Tab } from "./components/BottomNav";
+import type { Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
 import { LoadingState } from "./components/LoadingState";
-import { PaywallWinbackModal } from "./components/PaywallWinbackModal";
-import { CatalogScreen } from "./screens/CatalogScreen";
-import { NovelScreen } from "./screens/NovelScreen";
-import { PaywallScreen } from "./screens/PaywallScreen";
-import { ProfileScreen } from "./screens/ProfileScreen";
-import { ReaderScreen } from "./screens/ReaderScreen";
 import { openInvoice, openTelegramLink } from "./telegram";
+
+const BottomNav = lazy(() => import("./components/BottomNav").then((module) => ({ default: module.BottomNav })));
+const CatalogScreen = lazy(() => import("./screens/CatalogScreen").then((module) => ({ default: module.CatalogScreen })));
+const NovelScreen = lazy(() => import("./screens/NovelScreen").then((module) => ({ default: module.NovelScreen })));
+const PaywallScreen = lazy(() => import("./screens/PaywallScreen").then((module) => ({ default: module.PaywallScreen })));
+const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((module) => ({ default: module.ProfileScreen })));
+const ReaderScreen = lazy(() => import("./screens/ReaderScreen").then((module) => ({ default: module.ReaderScreen })));
+const PaywallWinbackModal = lazy(() =>
+  import("./components/PaywallWinbackModal").then((module) => ({ default: module.PaywallWinbackModal }))
+);
 
 type View =
   | { name: "catalog" }
@@ -133,7 +136,9 @@ export function App() {
 
   const showNextWinbackOfferAfterInvoice = (status: string) => {
     if (status === "paid") return;
-    setWinbackOffer(starsHelpWinbackOffer);
+    import("@novell-reader/shared")
+      .then((module) => setWinbackOffer(module.starsHelpWinbackOffer))
+      .catch((err) => setError(toAppError(err, "Не удалось показать предложение")));
   };
 
   const handleWinbackAction = () => {
@@ -164,56 +169,62 @@ export function App() {
   return (
     <div className="app-shell">
       <div className={pageScrollClassName} data-testid="page-scroll-root" key={viewKey} ref={pageScrollRootRef}>
-        {view.name === "catalog" && <CatalogScreen books={books} onOpenBook={openBook} />}
-        {view.name === "profile" && (
-          <ProfileScreen
-            books={books}
-            onContinue={(book) => {
-              api.analytics("продолжил чтение из профиля", { bookId: book.id }).catch(console.error);
-              void openChapter(book.id, book.progress?.chapterNumber ?? 1);
-            }}
-            onOpenPaywall={() => {
-              api.analytics("открыл paywall из профиля").catch(console.error);
-              setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
-            }}
-            onOpenSupport={() => {
-              api.analytics("открыл поддержку из профиля").catch(console.error);
-              openTelegramLink(supportUrl);
-            }}
-          />
-        )}
-        {view.name === "novel" && currentBook && (
-          <NovelScreen
-            book={currentBook}
-            similarBooks={similarBooks}
-            onBack={() => setView({ name: "catalog" })}
-            onRead={(chapterNumber) => void openChapter(currentBook.id, chapterNumber)}
-            onOpenSimilar={openBook}
-          />
-        )}
-        {view.name === "reader" && currentBook && (
-          <ReaderScreen
-            chapter={view.chapter}
-            bookTitle={currentBook.title}
-            scrollRootRef={pageScrollRootRef}
-            onBack={() => setView({ name: "novel", bookId: currentBook.id })}
-            onNavigate={(chapterNumber) => void openChapter(currentBook.id, chapterNumber)}
-          />
-        )}
-        {view.name === "paywall" && (
-          <PaywallScreen
-            onBack={leavePaywall}
-            onBuy={(planId) => {
-              api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber, planId }).catch(console.error);
-              api
-                .createPayment(planId)
-                .then((payment) => openInvoice(payment.invoiceLink, showNextWinbackOfferAfterInvoice))
-                .catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
-            }}
-          />
-        )}
+        <Suspense fallback={<LoadingState />}>
+          {view.name === "catalog" && <CatalogScreen books={books} onOpenBook={openBook} />}
+          {view.name === "profile" && (
+            <ProfileScreen
+              books={books}
+              onContinue={(book) => {
+                api.analytics("продолжил чтение из профиля", { bookId: book.id }).catch(console.error);
+                void openChapter(book.id, book.progress?.chapterNumber ?? 1);
+              }}
+              onOpenPaywall={() => {
+                api.analytics("открыл paywall из профиля").catch(console.error);
+                setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
+              }}
+              onOpenSupport={() => {
+                api.analytics("открыл поддержку из профиля").catch(console.error);
+                openTelegramLink(supportUrl);
+              }}
+            />
+          )}
+          {view.name === "novel" && currentBook && (
+            <NovelScreen
+              book={currentBook}
+              similarBooks={similarBooks}
+              onBack={() => setView({ name: "catalog" })}
+              onRead={(chapterNumber) => void openChapter(currentBook.id, chapterNumber)}
+              onOpenSimilar={openBook}
+            />
+          )}
+          {view.name === "reader" && currentBook && (
+            <ReaderScreen
+              chapter={view.chapter}
+              bookTitle={currentBook.title}
+              scrollRootRef={pageScrollRootRef}
+              onBack={() => setView({ name: "novel", bookId: currentBook.id })}
+              onNavigate={(chapterNumber) => void openChapter(currentBook.id, chapterNumber)}
+            />
+          )}
+          {view.name === "paywall" && (
+            <PaywallScreen
+              onBack={leavePaywall}
+              onBuy={(planId) => {
+                api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber, planId }).catch(console.error);
+                api
+                  .createPayment(planId)
+                  .then((payment) => openInvoice(payment.invoiceLink, showNextWinbackOfferAfterInvoice))
+                  .catch((err) => setError(toAppError(err, "Не удалось открыть оплату")));
+              }}
+            />
+          )}
+        </Suspense>
       </div>
-      {winbackOffer && <PaywallWinbackModal offer={winbackOffer} onAction={handleWinbackAction} onClose={showNextWinbackOfferOrLeave} />}
+      {winbackOffer && (
+        <Suspense fallback={null}>
+          <PaywallWinbackModal offer={winbackOffer} onAction={handleWinbackAction} onClose={showNextWinbackOfferOrLeave} />
+        </Suspense>
+      )}
       {view.name !== "reader" && (
         <BottomNav
           activeTab={activeTab}

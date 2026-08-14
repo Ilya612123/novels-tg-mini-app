@@ -71,6 +71,15 @@ describe("createApiServer", () => {
     expect(res.headers["content-type"]).toContain("image/jpeg");
   });
 
+  it("serves imported images with long immutable cache headers", async () => {
+    await fs.writeFile(path.join(contentDir, "book-1", "cover.webp"), Buffer.from("RIFFxxxxWEBP", "ascii"));
+    const app = createApiServer({ config, db: testDb.db, contentRoot: contentDir });
+
+    const res = await request(app).get("/content/imported/book-1/cover.webp").expect(200);
+
+    expect(res.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  });
+
   it("returns paywall for paid chapter without access", async () => {
     const app = createApiServer({ config, db: testDb.db });
     const res = await request(app)

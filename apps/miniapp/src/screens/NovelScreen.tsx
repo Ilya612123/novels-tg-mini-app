@@ -1,6 +1,9 @@
 import { Star } from "lucide-react";
 import type { BookSummary } from "@novell-reader/shared";
 
+const highPriorityImageProps = { fetchpriority: "high" };
+const lowPriorityImageProps = { fetchpriority: "low" };
+
 function languageFromDescription(description: string | null): string | null {
   const match = description?.trim().match(/^Язык:\s*(.+)$/i);
   return match?.[1]?.trim() ?? null;
@@ -43,7 +46,13 @@ export function NovelScreen({
       <button className="text-button" onClick={onBack} type="button">
         Назад
       </button>
-      <div className="detail-cover cover">{book.coverUrl ? <img src={book.coverUrl} alt="" /> : <span>{book.title.slice(0, 1)}</span>}</div>
+      <div className="detail-cover cover">
+        {book.coverUrl ? (
+          <img src={book.coverUrl} alt="" decoding="async" loading="eager" {...highPriorityImageProps} />
+        ) : (
+          <span>{book.title.slice(0, 1)}</span>
+        )}
+      </div>
       <h1>{book.title}</h1>
       <button className="primary-button" onClick={() => onRead(chapterNumber)} type="button">
         {book.progress ? "Продолжить" : "Читать"}
@@ -88,7 +97,11 @@ export function NovelScreen({
             {similarBooks.map((item) => (
               <button className="similar-book-button" key={item.id} onClick={() => onOpenSimilar(item.id)} type="button">
                 <span className="similar-book-cover cover">
-                  {item.coverUrl ? <img src={item.coverUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                  {item.coverUrl ? (
+                    <img src={item.coverUrl} alt="" decoding="async" loading="lazy" {...lowPriorityImageProps} />
+                  ) : (
+                    <span>{item.title.slice(0, 1)}</span>
+                  )}
                 </span>
                 <span className="similar-book-copy">
                   <strong>{item.title}</strong>

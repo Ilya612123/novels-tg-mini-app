@@ -87,7 +87,7 @@ export function createApiServer(deps: ApiDeps) {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
-  app.use("/content/imported", express.static(contentRoot));
+  app.use("/content/imported", express.static(contentRoot, { immutable: true, maxAge: "1y" }));
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 

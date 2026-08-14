@@ -29,4 +29,14 @@ describe("BookCard", () => {
 
     expect(screen.getByLabelText("Средняя оценка 9.7 из 10").textContent).toBe("9.7");
   });
+
+  it("loads cover images lazily without blocking decode", () => {
+    render(<BookCard book={{ ...book, coverUrl: "/content/imported/book-1/cover.webp" }} onOpen={vi.fn()} />);
+
+    const cover = document.querySelector<HTMLImageElement>(".cover img");
+    if (!cover) throw new Error("Expected cover image to render");
+    expect(cover.getAttribute("loading")).toBe("lazy");
+    expect(cover.getAttribute("decoding")).toBe("async");
+    expect(cover.getAttribute("fetchpriority")).toBe("low");
+  });
 });

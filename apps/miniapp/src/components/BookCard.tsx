@@ -1,5 +1,7 @@
 import type { BookSummary } from "@novell-reader/shared";
 
+const lowPriorityImageProps = { fetchpriority: "low" };
+
 export function BookCard({ book, onOpen }: { book: BookSummary; onOpen: (bookId: string) => void }) {
   const progressText = book.progress ? `Глава ${book.progress.chapterNumber}` : `${book.chapterCount} глав`;
   const ratingText = book.rating.averageScore.toFixed(1);
@@ -10,7 +12,11 @@ export function BookCard({ book, onOpen }: { book: BookSummary; onOpen: (bookId:
         <span className="book-rating-badge" aria-label={`Средняя оценка ${ratingText} из 10`}>
           {ratingText}
         </span>
-        {book.coverUrl ? <img src={book.coverUrl} alt="" /> : <span>{book.title.slice(0, 1)}</span>}
+        {book.coverUrl ? (
+          <img src={book.coverUrl} alt="" decoding="async" loading="lazy" {...lowPriorityImageProps} />
+        ) : (
+          <span>{book.title.slice(0, 1)}</span>
+        )}
       </div>
       <div className="book-card-text">
         <h3>{book.title}</h3>

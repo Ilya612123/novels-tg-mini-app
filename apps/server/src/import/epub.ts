@@ -3,6 +3,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import * as cheerio from "cheerio";
 import sanitizeHtml from "sanitize-html";
+import sharp from "sharp";
 import slugify from "slugify";
 import { calculateFreeChapterLimit } from "@novell-reader/shared";
 import type { DbClient } from "../db.js";
@@ -200,9 +201,11 @@ async function saveCover(zip: AdmZip, opf: ParsedOpf, bookOutputDir: string): Pr
   const entry = zip.getEntry(coverPath);
   if (!entry) return null;
 
-  const extension = path.extname(coverItem.href) || ".jpg";
-  const relativePath = path.join(path.basename(bookOutputDir), `cover${extension}`);
-  await fs.writeFile(path.join(bookOutputDir, `cover${extension}`), entry.getData());
+  const relativePath = path.join(path.basename(bookOutputDir), "cover.webp");
+  await sharp(entry.getData())
+    .resize({ width: 640, withoutEnlargement: true })
+    .webp({ quality: 76, effort: 5 })
+    .toFile(path.join(bookOutputDir, "cover.webp"));
   return relativePath;
 }
 
