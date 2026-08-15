@@ -25,4 +25,17 @@ describe("loadConfig", () => {
       "https://reader.example.com"
     );
   });
+
+  it("ignores blank optional environment values from .env files", () => {
+    const env = loadConfig({
+      ...requiredEnv,
+      PUBLIC_BASE_URL: "",
+      MINI_APP_URL: "",
+      MINI_APP_DIST_DIR: ""
+    });
+
+    expect(env.MINI_APP_URL).toBe("http://localhost:3000");
+    expect(env.PUBLIC_BASE_URL).toBeUndefined();
+    expect(env.MINI_APP_DIST_DIR).toBeUndefined();
+  });
 });

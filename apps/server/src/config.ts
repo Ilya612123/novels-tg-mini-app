@@ -19,6 +19,7 @@ const EnvSchema = z.object({
   STARS_ACCESS_PRICE: z.coerce.number().int().positive(),
   DATABASE_URL: z.string().min(1).default(DEFAULT_DATABASE_URL),
   PUBLIC_BASE_URL: z.string().url().optional(),
+  MINI_APP_DIST_DIR: z.string().min(1).optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   BOT_MODE: z.enum(["polling", "webhook"]).default("webhook")
 });
@@ -26,8 +27,17 @@ const EnvSchema = z.object({
 type ParsedEnv = z.infer<typeof EnvSchema>;
 export type AppConfig = Omit<ParsedEnv, "MINI_APP_URL"> & { MINI_APP_URL: string };
 
+function normalizeOptionalEnv(env: NodeJS.ProcessEnv) {
+  for (const key of ["MINI_APP_URL", "PUBLIC_BASE_URL", "MINI_APP_DIST_DIR"] as const) {
+    if (env[key] === "") {
+      delete env[key];
+    }
+  }
+}
+
 export function loadConfig(env = process.env): AppConfig {
   ensureDatabaseUrl(env);
+  normalizeOptionalEnv(env);
   const config = EnvSchema.parse(env);
   return {
     ...config,

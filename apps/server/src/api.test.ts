@@ -12,6 +12,7 @@ import { createTestDb } from "./test/db.js";
 
 let testDb: TestDb;
 let contentDir: string;
+let miniAppDistDir: string;
 
 const config: AppConfig = {
   BOT_TOKEN: "token",
@@ -27,9 +28,13 @@ const config: AppConfig = {
 beforeEach(async () => {
   testDb = await createTestDb();
   contentDir = await mkdtemp(path.join(tmpdir(), "novell-reader-content-"));
+  miniAppDistDir = await mkdtemp(path.join(tmpdir(), "novell-reader-miniapp-"));
   await fs.mkdir(path.join(contentDir, "book-1", "chapters"), { recursive: true });
+  await fs.mkdir(path.join(miniAppDistDir, "assets"), { recursive: true });
   await fs.writeFile(path.join(contentDir, "book-1", "chapters", "1.html"), "<p>Первая глава</p>");
   await fs.writeFile(path.join(contentDir, "book-1", "chapters", "18.html"), "<p>Платная глава</p>");
+  await fs.writeFile(path.join(miniAppDistDir, "index.html"), '<html><body><div id="root"></div></body></html>');
+  await fs.writeFile(path.join(miniAppDistDir, "assets", "app.js"), "console.log('miniapp');");
   await testDb.db.book.create({
     data: {
       id: "book-1",
@@ -52,6 +57,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await testDb?.cleanup();
   await fs.rm(contentDir, { recursive: true, force: true });
+  await fs.rm(miniAppDistDir, { recursive: true, force: true });
 });
 
 describe("createApiServer", () => {
@@ -78,6 +84,26 @@ describe("createApiServer", () => {
     const res = await request(app).get("/content/imported/book-1/cover.webp").expect(200);
 
     expect(res.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  });
+
+  it("serves the built Mini App index from the configured dist directory", async () => {
+    const app = createApiServer({ config, db: testDb.db, miniAppDistDir });
+
+    const res = await request(app).get("/").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain('<div id="root"></div>');
+  });
+
+  it("serves built Mini App assets without intercepting API routes", async () => {
+    const app = createApiServer({ config, db: testDb.db, miniAppDistDir });
+
+    const asset = await request(app).get("/assets/app.js").expect(200);
+    await request(app).get("/api").expect(404);
+    await request(app).get("/api/books").expect(401);
+
+    expect(asset.headers["content-type"]).toContain("javascript");
+    expect(asset.text).toContain("miniapp");
   });
 
   it("returns paywall for paid chapter without access", async () => {

@@ -1,0 +1,27 @@
+services:
+  novell-reader:
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      BOT_MODE: polling
+      DATABASE_URL: file:/app/data/prod.db
+      MINI_APP_DIST_DIR: /app/apps/miniapp/dist
+    ports:
+      - "3000:3000"
+    volumes:
+      - novell-reader-data:/app/data
+      - ./content:/app/content
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  novell-reader-data:

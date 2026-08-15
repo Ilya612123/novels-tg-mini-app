@@ -19,6 +19,7 @@ export type ApiDeps = {
   db: DbClient;
   bot?: Bot;
   contentRoot?: string;
+  miniAppDistDir?: string;
   devWebhookRetryDelayMs?: number;
 };
 
@@ -84,10 +85,14 @@ function asyncRoute(handler: (req: Request, res: Response) => Promise<void>) {
 export function createApiServer(deps: ApiDeps) {
   const projectRoot = process.cwd().endsWith(path.join("apps", "server")) ? path.resolve(process.cwd(), "../..") : process.cwd();
   const contentRoot = deps.contentRoot ?? path.join(projectRoot, "content/imported");
+  const miniAppDistDir = deps.miniAppDistDir ?? deps.config.MINI_APP_DIST_DIR;
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
   app.use("/content/imported", express.static(contentRoot, { immutable: true, maxAge: "1y" }));
+  if (miniAppDistDir) {
+    app.use(express.static(miniAppDistDir, { index: "index.html" }));
+  }
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -197,6 +202,25 @@ export function createApiServer(deps: ApiDeps) {
       res.json({ offer });
     })
   );
+
+  if (miniAppDistDir) {
+    app.get("*", (req, res, next) => {
+      if (
+        req.path === "/api" ||
+        req.path === "/content" ||
+        req.path === "/telegram" ||
+        req.path === "/dev" ||
+        req.path.startsWith("/api/") ||
+        req.path.startsWith("/content/") ||
+        req.path.startsWith("/telegram/") ||
+        req.path.startsWith("/dev/")
+      ) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(miniAppDistDir, "index.html"));
+    });
+  }
 
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof z.ZodError) {

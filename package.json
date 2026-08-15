@@ -10,7 +10,8 @@
     "dev": "node scripts/dev.mjs",
     "dev:server": "pnpm --filter @novell-reader/server dev",
     "dev:miniapp": "pnpm --filter @novell-reader/miniapp dev",
-    "import:epub": "pnpm --filter @novell-reader/server import:epub"
+    "import:epub": "pnpm --filter @novell-reader/server import:epub",
+    "start:prod": "pnpm --filter @novell-reader/server exec prisma db push && pnpm import:epub && node apps/server/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
