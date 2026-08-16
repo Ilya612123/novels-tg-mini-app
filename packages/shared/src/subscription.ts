@@ -1,9 +1,15 @@
+export const RUB_PER_TELEGRAM_STAR = 1.8;
+
+function rublesToTelegramStars(rubles: number) {
+  return Math.ceil(rubles / RUB_PER_TELEGRAM_STAR);
+}
+
 export const subscriptionPlans = [
   {
     id: "month",
     title: "Месяц",
     priceLabel: "299₽",
-    starsAmount: 299,
+    starsAmount: rublesToTelegramStars(299),
     durationDays: 30,
     period: "1 месяц",
     oldPrice: null,
@@ -18,7 +24,7 @@ export const subscriptionPlans = [
     id: "four-months",
     title: "4 месяца",
     priceLabel: "819₽",
-    starsAmount: 819,
+    starsAmount: rublesToTelegramStars(819),
     durationDays: 120,
     period: "205₽/мес",
     oldPrice: "1196₽",
@@ -33,7 +39,7 @@ export const subscriptionPlans = [
     id: "half-year",
     title: "Полгода",
     priceLabel: "1499₽",
-    starsAmount: 1499,
+    starsAmount: rublesToTelegramStars(1499),
     durationDays: 180,
     period: "250₽/мес",
     oldPrice: "1794₽",
@@ -48,7 +54,7 @@ export const subscriptionPlans = [
     id: "year",
     title: "Год",
     priceLabel: "2999₽",
-    starsAmount: 2999,
+    starsAmount: rublesToTelegramStars(2999),
     durationDays: 365,
     period: "250₽/мес",
     oldPrice: "3588₽",
@@ -62,11 +68,11 @@ export const subscriptionPlans = [
   {
     id: "month-50-off",
     title: "Месяц -50%",
-    priceLabel: "149 Stars",
-    starsAmount: 149,
+    priceLabel: "149₽",
+    starsAmount: rublesToTelegramStars(149),
     durationDays: 30,
     period: "1 месяц",
-    oldPrice: "299 Stars",
+    oldPrice: "299₽",
     discount: "Скидка 50%",
     badge: null,
     invoiceTitle: "Доступ к новеллам на 30 дней со скидкой 50%",
@@ -77,11 +83,11 @@ export const subscriptionPlans = [
   {
     id: "month-75-off",
     title: "Месяц -75%",
-    priceLabel: "75 Stars",
-    starsAmount: 75,
+    priceLabel: "75₽",
+    starsAmount: rublesToTelegramStars(75),
     durationDays: 30,
     period: "1 месяц",
-    oldPrice: "299 Stars",
+    oldPrice: "299₽",
     discount: "Скидка 75%",
     badge: null,
     invoiceTitle: "Доступ к новеллам на 30 дней со скидкой 75%",
@@ -110,7 +116,7 @@ export const paywallDiscountWinbackOffers = [
     kind: "discount",
     title: "1 месяц со скидкой 50%",
     body: "Откройте все платные главы на 30 дней по специальной цене.",
-    buttonLabel: "Купить за 149 Stars",
+    buttonLabel: "Купить за 149₽",
     planId: "month-50-off"
   },
   {
@@ -118,7 +124,7 @@ export const paywallDiscountWinbackOffers = [
     kind: "discount",
     title: "1 месяц со скидкой 75%",
     body: "Последнее предложение: 30 дней доступа с максимальной скидкой.",
-    buttonLabel: "Купить за 75 Stars",
+    buttonLabel: "Купить за 75₽",
     planId: "month-75-off"
   }
 ] as const;

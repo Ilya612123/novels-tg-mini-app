@@ -136,11 +136,11 @@ describe("createApiServer", () => {
       expect.any(String),
       "",
       "XTR",
-      [{ label: "4 месяца доступа", amount: 819 }]
+      [{ label: "4 месяца доступа", amount: 455 }]
     );
     await expect(testDb.db.payment.findFirstOrThrow()).resolves.toMatchObject({
       planId: "four-months",
-      starsAmount: 819,
+      starsAmount: 455,
       accessDays: 120
     });
   });
@@ -165,11 +165,11 @@ describe("createApiServer", () => {
       expect.any(String),
       "",
       "XTR",
-      [{ label: "30 дней доступа со скидкой 50%", amount: 149 }]
+      [{ label: "30 дней доступа со скидкой 50%", amount: 83 }]
     );
     await expect(testDb.db.payment.findFirstOrThrow()).resolves.toMatchObject({
       planId: "month-50-off",
-      starsAmount: 149,
+      starsAmount: 83,
       accessDays: 30
     });
   });

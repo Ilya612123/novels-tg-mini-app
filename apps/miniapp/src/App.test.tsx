@@ -349,8 +349,8 @@ describe("App", () => {
       if (callback) invoiceCallbacks.push(callback);
     });
     const winbackResponses = [
-      { offer: { id: "month-50-off", kind: "discount", title: "1 месяц со скидкой 50%", body: "Продолжите читать дешевле.", buttonLabel: "Купить за 149 Stars", planId: "month-50-off" } },
-      { offer: { id: "month-75-off", kind: "discount", title: "1 месяц со скидкой 75%", body: "Последнее предложение.", buttonLabel: "Купить за 75 Stars", planId: "month-75-off" } },
+      { offer: { id: "month-50-off", kind: "discount", title: "1 месяц со скидкой 50%", body: "Продолжите читать дешевле.", buttonLabel: "Купить за 149₽", planId: "month-50-off" } },
+      { offer: { id: "month-75-off", kind: "discount", title: "1 месяц со скидкой 75%", body: "Последнее предложение.", buttonLabel: "Купить за 75₽", planId: "month-75-off" } },
       { offer: null }
     ];
     const fetchMock = vi.fn((url: string) => {
@@ -382,7 +382,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
     expect(await screen.findByText("1 месяц со скидкой 50%")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Купить за 149 Stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Купить за 149₽" }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
