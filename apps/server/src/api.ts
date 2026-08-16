@@ -12,7 +12,7 @@ import { listBooksForUser, getBookDetailForUser, getChapterForUser } from "./ser
 import { saveProgress } from "./services/progress.js";
 import { createAnalyticsEvent } from "./services/analytics.js";
 import { createAccessInvoiceLink } from "./services/payments.js";
-import { reserveNextPaywallWinbackOffer } from "./repositories/paywallWinback.js";
+import { listPaywallPlansForUser, reserveNextPaywallWinbackOffer } from "./repositories/paywallWinback.js";
 
 export type ApiDeps = {
   config: AppConfig;
@@ -191,6 +191,15 @@ export function createApiServer(deps: ApiDeps) {
       const body = PaymentCreateSchema.parse(req.body);
       if (!deps.bot) throw new HttpError(503, "Бот недоступен для создания платежа");
       res.json(await createAccessInvoiceLink({ bot: deps.bot, db: deps.db, userId: user.id, planId: body.planId }));
+    })
+  );
+
+  app.get(
+    "/api/paywall/plans",
+    asyncRoute(async (req, res) => {
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
+      const plans = await listPaywallPlansForUser(deps.db, user.id);
+      res.json({ plans });
     })
   );
 

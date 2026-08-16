@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import type { BookSummary, ChapterDto, PaywallWinbackOffer } from "@novell-reader/shared";
+import { publicSubscriptionPlans, type BookSummary, type ChapterDto, type PaywallWinbackOffer, type SubscriptionPlan } from "@novell-reader/shared";
 import { ApiError, api } from "./api/client";
 import type { Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
@@ -56,7 +56,9 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
   const [winbackOffer, setWinbackOffer] = useState<PaywallWinbackOffer | null>(null);
+  const [paywallPlans, setPaywallPlans] = useState<SubscriptionPlan[]>([...publicSubscriptionPlans]);
   const pageScrollRootRef = useRef<HTMLDivElement>(null);
+  const viewKey = getViewKey(view);
 
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
@@ -69,6 +71,16 @@ export function App() {
       .catch((err: unknown) => setError(toAppError(err, "Не удалось загрузить книги")))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (view.name !== "paywall") return;
+    api
+      .paywallPlans()
+      .then(({ plans }) => {
+        if (Array.isArray(plans) && plans.length > 0) setPaywallPlans(plans);
+      })
+      .catch(console.error);
+  }, [viewKey, view.name]);
 
   const currentBook = useMemo(() => {
     if (view.name === "novel" || view.name === "reader" || (view.name === "paywall" && view.bookId)) {
@@ -105,7 +117,6 @@ export function App() {
 
   const activeTab: Tab = view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile") ? "profile" : "catalog";
   const isTelegramAuthError = error?.status === 401;
-  const viewKey = getViewKey(view);
 
   const leavePaywall = () => {
     if (view.name !== "paywall") return;
@@ -208,6 +219,7 @@ export function App() {
           )}
           {view.name === "paywall" && (
             <PaywallScreen
+              plans={paywallPlans}
               onBack={leavePaywall}
               onBuy={(planId) => {
                 api.analytics("нажал кнопку оплаты", { bookId: view.bookId, chapterNumber: view.chapterNumber, planId }).catch(console.error);

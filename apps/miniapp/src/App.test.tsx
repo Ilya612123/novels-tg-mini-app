@@ -407,4 +407,63 @@ describe("App", () => {
     invoiceCallbacks[2]?.("cancelled");
     expect(await screen.findByText("Не хватает Stars?")).toBeTruthy();
   });
+
+  it("shows an issued discount offer when the paywall is opened again", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      if (url.endsWith("/api/paywall/plans")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              plans: [
+                {
+                  id: "month",
+                  title: "Месяц",
+                  priceLabel: "299₽",
+                  starsAmount: 167,
+                  durationDays: 30,
+                  period: "1 месяц",
+                  oldPrice: null,
+                  discount: null,
+                  badge: null,
+                  invoiceTitle: "Доступ к новеллам на 30 дней",
+                  invoiceDescription: "Откройте продолжение всех новелл на 30 дней.",
+                  invoiceLabel: "30 дней доступа",
+                  paywallVisible: true
+                },
+                {
+                  id: "month-50-off",
+                  title: "Месяц -50%",
+                  priceLabel: "149₽",
+                  starsAmount: 83,
+                  durationDays: 30,
+                  period: "1 месяц",
+                  oldPrice: "299₽",
+                  discount: "Скидка 50%",
+                  badge: null,
+                  invoiceTitle: "Доступ к новеллам на 30 дней со скидкой 50%",
+                  invoiceDescription: "Откройте продолжение всех новелл на 30 дней со скидкой 50%.",
+                  invoiceLabel: "30 дней доступа со скидкой 50%",
+                  paywallVisible: false
+                }
+              ]
+            }),
+            { status: 200 }
+          )
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(screen.getByText("Купить подписку"));
+
+    expect(await screen.findByRole("radio", { name: /Месяц -50%/ })).toBeTruthy();
+    expect(screen.getByText("149₽")).toBeTruthy();
+  });
 });

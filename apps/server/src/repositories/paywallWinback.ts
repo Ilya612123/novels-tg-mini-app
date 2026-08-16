@@ -1,4 +1,9 @@
-import { paywallDiscountWinbackOffers, type PaywallWinbackOffer } from "@novell-reader/shared";
+import {
+  paywallDiscountWinbackOffers,
+  subscriptionPlans,
+  type PaywallWinbackOffer,
+  type SubscriptionPlan
+} from "@novell-reader/shared";
 import type { DbClient } from "../db.js";
 
 export async function reserveNextPaywallWinbackOffer(db: DbClient, userId: string): Promise<PaywallWinbackOffer | null> {
@@ -17,4 +22,18 @@ export async function reserveNextPaywallWinbackOffer(db: DbClient, userId: strin
   });
 
   return nextOffer;
+}
+
+export async function listPaywallPlansForUser(db: DbClient, userId: string): Promise<SubscriptionPlan[]> {
+  const shownOffers = await db.paywallWinbackImpression.findMany({
+    where: { userId },
+    select: { offerId: true }
+  });
+  const shownDiscountPlanIds = new Set<SubscriptionPlan["id"]>();
+  for (const offer of shownOffers) {
+    const discountOffer = paywallDiscountWinbackOffers.find((item) => item.id === offer.offerId);
+    if (discountOffer) shownDiscountPlanIds.add(discountOffer.planId);
+  }
+
+  return subscriptionPlans.filter((plan) => plan.paywallVisible || shownDiscountPlanIds.has(plan.id));
 }

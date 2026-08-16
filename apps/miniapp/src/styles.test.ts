@@ -43,6 +43,11 @@ describe("miniapp design system", () => {
     expect(css).toMatch(/\.screen\s*{[^}]*padding:\s*var\(--space-5\) var\(--space-4\) calc\(var\(--nav-height\) \+ var\(--space-7\) \+ var\(--safe-area-bottom\)\)/s);
   });
 
+  it("reserves bottom space on the paywall for the fixed buy button", () => {
+    expect(css).toContain("--paywall-buy-bar-reserve: calc(var(--control-height-lg) + var(--space-6) + var(--safe-area-bottom))");
+    expect(css).toMatch(/\.paywall-screen\s*{[^}]*padding-bottom:\s*calc\(var\(--nav-height\) \+ var\(--paywall-buy-bar-reserve\) \+ var\(--space-5\)\)/s);
+  });
+
   it("lays out the reader as fixed-height pages instead of vertical scrolling text", () => {
     expect(css).toContain("--reader-action-height: var(--control-height-sm)");
     expect(css).toContain("--reader-bottom-reserve: 0px");

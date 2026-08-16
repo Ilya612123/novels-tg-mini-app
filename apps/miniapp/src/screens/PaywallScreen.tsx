@@ -1,9 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Crown } from "lucide-react";
-import { publicSubscriptionPlans, type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
+import { type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
 
-export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: (planId: SubscriptionPlanId) => void }) {
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(publicSubscriptionPlans[0]);
+export function PaywallScreen({
+  onBack,
+  onBuy,
+  plans
+}: {
+  onBack: () => void;
+  onBuy: (planId: SubscriptionPlanId) => void;
+  plans: SubscriptionPlan[];
+}) {
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(plans[0]);
+
+  useEffect(() => {
+    if (!plans.some((plan) => plan.id === selectedPlan.id)) {
+      setSelectedPlan(plans[0]);
+    }
+  }, [plans, selectedPlan.id]);
 
   return (
     <main className="screen paywall-screen">
@@ -15,10 +29,10 @@ export function PaywallScreen({ onBack, onBuy }: { onBack: () => void; onBuy: (p
       </header>
 
       <section className="subscription-plans" role="radiogroup" aria-label="Тарифы подписки">
-        {publicSubscriptionPlans.map((plan) => (
-          <label className={`subscription-plan${selectedPlan.title === plan.title ? " subscription-plan-selected" : ""}`} key={plan.title}>
+        {plans.map((plan) => (
+          <label className={`subscription-plan${selectedPlan.id === plan.id ? " subscription-plan-selected" : ""}`} key={plan.id}>
             <input
-              checked={selectedPlan.title === plan.title}
+              checked={selectedPlan.id === plan.id}
               className="subscription-plan-radio"
               name="subscription-plan"
               onChange={() => setSelectedPlan(plan)}

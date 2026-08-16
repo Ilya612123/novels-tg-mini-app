@@ -82,6 +82,7 @@
   --reader-action-height: var(--control-height-sm);
   --reader-bottom-reserve: 0px;
   --reader-page-gap: var(--space-4);
+  --paywall-buy-bar-reserve: calc(var(--control-height-lg) + var(--space-6) + var(--safe-area-bottom));
   --app-viewport-height: 100dvh;
   --book-title-lines: 3;
   --z-cover-badge: 1;
@@ -611,7 +612,7 @@ h2 {
 }
 
 .paywall-screen {
-  padding-bottom: calc(var(--nav-height) + var(--space-7));
+  padding-bottom: calc(var(--nav-height) + var(--paywall-buy-bar-reserve) + var(--space-5));
 }
 
 .paywall-header {

@@ -185,6 +185,21 @@ describe("createApiServer", () => {
     expect(third.body.offer).toBeNull();
   });
 
+  it("includes already issued discount offers in paywall plans", async () => {
+    const app = createApiServer({ config, db: testDb.db });
+
+    await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
+    const res = await request(app).get("/api/paywall/plans").set("x-dev-telegram-user-id", "5100586818").expect(200);
+
+    expect(res.body.plans.map((plan: { id: string }) => plan.id)).toEqual([
+      "month",
+      "four-months",
+      "half-year",
+      "year",
+      "month-50-off"
+    ]);
+  });
+
   it("sets Telegram webhook and runtime Mini App URL in local dev", async () => {
     const setWebhook = vi.fn().mockResolvedValue(true);
     const localConfig = { ...config, BOT_MODE: "webhook" as const };
