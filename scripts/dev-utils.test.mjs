@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatPortConflicts, getDevPreparationCommands, getOccupiedDevPorts, stopPortListeners } from "./dev-utils.mjs";
+import {
+  formatPortConflicts,
+  getDevPreparationCommands,
+  getDevServerEnv,
+  getOccupiedDevPorts,
+  stopPortListeners
+} from "./dev-utils.mjs";
 
 test("getOccupiedDevPorts reports occupied dev ports", async () => {
   const occupiedPorts = await getOccupiedDevPorts(
@@ -71,4 +77,13 @@ test("getDevPreparationCommands syncs the local Prisma database and imports EPUB
       env: { DATABASE_URL: "file:./dev.db" }
     }
   ]);
+});
+
+test("getDevServerEnv starts the local bot in webhook mode", () => {
+  assert.deepEqual(getDevServerEnv({ serverPort: 3000, miniappOrigin: "http://localhost:5173" }), {
+    BOT_MODE: "webhook",
+    PORT: "3000",
+    MINI_APP_URL: "http://localhost:5173",
+    PUBLIC_BASE_URL: "http://localhost:5173"
+  });
 });

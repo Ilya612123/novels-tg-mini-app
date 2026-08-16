@@ -1,6 +1,12 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { formatPortConflicts, getDevPreparationCommands, getOccupiedDevPorts, stopPortListeners } from "./dev-utils.mjs";
+import {
+  formatPortConflicts,
+  getDevPreparationCommands,
+  getDevServerEnv,
+  getOccupiedDevPorts,
+  stopPortListeners
+} from "./dev-utils.mjs";
 
 const SERVER_PORT = Number(process.env.PORT ?? 3000);
 const MINIAPP_PORT = Number(process.env.MINIAPP_PORT ?? 5173);
@@ -173,12 +179,7 @@ for (const step of getDevPreparationCommands()) {
 console.log("[dev] starting server, mini app and Cloudflare tunnel");
 
 spawnProcess("server", "pnpm", ["dev:server"], {
-  env: {
-    BOT_MODE: "polling",
-    PORT: String(SERVER_PORT),
-    MINI_APP_URL: MINIAPP_ORIGIN,
-    PUBLIC_BASE_URL: MINIAPP_ORIGIN
-  }
+  env: getDevServerEnv({ serverPort: SERVER_PORT, miniappOrigin: MINIAPP_ORIGIN })
 });
 
 spawnProcess("miniapp", "pnpm", ["dev:miniapp"], {
