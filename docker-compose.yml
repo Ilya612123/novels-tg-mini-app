@@ -11,6 +11,7 @@ services:
       BOT_MODE: polling
       DATABASE_URL: file:/app/data/prod.db
       MINI_APP_DIST_DIR: /app/apps/miniapp/dist
+    command: ["sh", "-c", "pnpm --filter @novell-reader/server exec prisma db push && node apps/server/dist/index.js"]
     ports:
       - "3000:3000"
     volumes:

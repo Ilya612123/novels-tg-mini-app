@@ -5,3 +5,9 @@ dist/
 *.db-journal
 apps/miniapp/vite.config.js
 package-lock.json
+
+# Local backup files
+*.bak-*
+
+# Generated converted images
+*.webp
