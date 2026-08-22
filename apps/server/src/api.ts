@@ -63,6 +63,7 @@ function isRetryableWebhookSetupError(error: unknown) {
 }
 
 async function setDevTelegramWebhook(bot: Bot, webhookUrl: string, retryDelayMs: number) {
+  await bot.api.deleteWebhook({ drop_pending_updates: true });
   for (let attempt = 1; attempt <= DEV_WEBHOOK_SETUP_ATTEMPTS; attempt += 1) {
     try {
       await bot.api.setWebhook(webhookUrl);

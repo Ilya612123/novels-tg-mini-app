@@ -79,9 +79,9 @@ test("getDevPreparationCommands syncs the local Prisma database and imports EPUB
   ]);
 });
 
-test("getDevServerEnv starts the local bot in webhook mode", () => {
+test("getDevServerEnv starts the local bot in polling mode", () => {
   assert.deepEqual(getDevServerEnv({ serverPort: 3000, miniappOrigin: "http://localhost:5173" }), {
-    BOT_MODE: "webhook",
+    BOT_MODE: "polling",
     PORT: "3000",
     MINI_APP_URL: "http://localhost:5173",
     PUBLIC_BASE_URL: "http://localhost:5173"
