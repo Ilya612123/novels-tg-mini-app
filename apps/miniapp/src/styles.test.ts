@@ -12,6 +12,7 @@ describe("miniapp design system", () => {
     expect(css).toContain("--font-size-subhead: 15px");
     expect(css).toContain("--font-size-footnote: 13px");
     expect(css).toContain("--font-size-caption: 12px");
+    expect(css).toContain("--font-size-book-preview: 10.4px");
     expect(css).toContain("--font-size-title-1: 28px");
     expect(css).toContain("--font-size-large-title: 34px");
     expect(css).toContain("--font-weight-regular: 400");
@@ -33,10 +34,18 @@ describe("miniapp design system", () => {
     expect(css).not.toMatch(/font-weight:\s*(800|900)\b/);
   });
 
-  it("keeps catalog card text height stable so cover previews align in the grid", () => {
-    expect(css).toMatch(/\.book-card\s*{[^}]*grid-template-rows:\s*auto 1fr/s);
-    expect(css).toMatch(/\.book-card-text\s*{[^}]*min-height:\s*calc\(\(var\(--line-height-callout\) \* var\(--book-title-lines\)\) \+ var\(--space-1\) \+ var\(--line-height-footnote\)\)/s);
+  it("lays out catalog cards as three cover-first columns with readable overlaid titles", () => {
+    expect(css).toContain("--book-card-overlay-min-height: calc(var(--line-height-book-preview) * var(--book-title-lines))");
+    expect(css).toContain("--gradient-cover-title-overlay: linear-gradient");
+    expect(css).toMatch(/\.book-grid\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
+    expect(css).toMatch(/\.book-card\s*{[^}]*display:\s*block/s);
+    expect(css).toMatch(/\.book-card-text\s*{[^}]*position:\s*absolute/s);
+    expect(css).toMatch(/\.book-card-text\s*{[^}]*font-family:\s*var\(--font-family-base\)/s);
+    expect(css).toMatch(/\.book-card-text::before\s*{[^}]*background:\s*var\(--gradient-cover-title-overlay\)/s);
     expect(css).toMatch(/\.book-card h3\s*{[^}]*-webkit-line-clamp:\s*var\(--book-title-lines\)/s);
+    expect(css).toMatch(/\.book-card h3\s*{[^}]*font-size:\s*var\(--font-size-book-preview\)/s);
+    expect(css).toMatch(/\.book-card h3\s*{[^}]*text-overflow:\s*ellipsis/s);
+    expect(css).toMatch(/\.book-rating-badge\s*{[^}]*font-size:\s*var\(--font-size-book-preview\)/s);
   });
 
   it("reserves bottom space inside screens for the fixed bottom navigation", () => {
