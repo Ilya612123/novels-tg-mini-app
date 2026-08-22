@@ -24,6 +24,18 @@ function coverUrl(coverPath: string | null): string | null {
   return coverPath ? `/content/imported/${coverPath.replaceAll("\\", "/")}` : null;
 }
 
+function parseBookTags(tagsJson: string | null): string[] {
+  if (!tagsJson) return [];
+
+  try {
+    const parsed = JSON.parse(tagsJson) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
 function normalizeTitle(value: string): string {
   return value.replace(/\s+/g, " ").trim().toLocaleLowerCase("ru");
 }
@@ -56,6 +68,7 @@ export async function listBooksForUser(db: DbClient, userId: string): Promise<Bo
     title: book.title,
     author: book.author,
     description: book.description,
+    tags: parseBookTags(book.tagsJson),
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
     freeChapterLimit: book.freeChapterLimit,
@@ -73,6 +86,7 @@ export async function getBookDetailForUser(db: DbClient, userId: string, bookId:
     title: book.title,
     author: book.author,
     description: book.description,
+    tags: parseBookTags(book.tagsJson),
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
     freeChapterLimit: book.freeChapterLimit,

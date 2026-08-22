@@ -11,6 +11,7 @@
     "dev:server": "pnpm --filter @novell-reader/server dev",
     "dev:miniapp": "pnpm --filter @novell-reader/miniapp dev",
     "import:epub": "pnpm --filter @novell-reader/server import:epub",
+    "import:novelchad": "pnpm --filter @novell-reader/server import:novelchad",
     "start:prod": "pnpm --filter @novell-reader/server exec prisma db push && pnpm import:epub && node apps/server/dist/index.js"
   },
   "devDependencies": {

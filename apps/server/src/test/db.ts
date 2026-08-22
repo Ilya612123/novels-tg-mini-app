@@ -22,6 +22,7 @@ const SCHEMA_SQL = [
     "title" TEXT NOT NULL,
     "author" TEXT,
     "description" TEXT,
+    "tagsJson" TEXT,
     "coverPath" TEXT,
     "chapterCount" INTEGER NOT NULL,
     "freeChapterLimit" INTEGER NOT NULL,
