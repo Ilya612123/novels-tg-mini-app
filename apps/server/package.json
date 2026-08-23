@@ -8,6 +8,7 @@
     "test": "vitest run",
     "dev": "tsx src/index.ts",
     "import:epub": "tsx src/import/cli.ts",
+    "import:imported-metadata": "tsx src/import/imported-metadata-cli.ts",
     "import:novelchad": "tsx src/import/novelchad-cli.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
