@@ -20,7 +20,8 @@ beforeEach(async () => {
       title: "Компенсация за первую любовь",
       chapterCount: 51,
       freeChapterLimit: 17,
-      sourceEpubFile: "sample.epub"
+      sourceEpubFile: "sample.epub",
+      tagsJson: JSON.stringify(["романтика", "драма"])
     }
   });
 });
@@ -49,6 +50,14 @@ describe("book ratings", () => {
     expect(book?.rating.averageScore).toBeGreaterThanOrEqual(8);
     expect(book?.rating.averageScore).toBeLessThanOrEqual(10);
     expect(book?.rating.distribution.map((row) => row.score)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+  });
+
+  it("returns stored book tags in lists and details", async () => {
+    const [listedBook] = await listBooksForUser(testDb.db, "5100586818");
+    const detailedBook = await getBookDetailForUser(testDb.db, "5100586818", "book-1");
+
+    expect(listedBook?.tags).toEqual(["романтика", "драма"]);
+    expect(detailedBook?.tags).toEqual(["романтика", "драма"]);
   });
 });
 

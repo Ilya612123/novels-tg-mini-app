@@ -124,7 +124,7 @@ export function getDevPreparationCommands() {
 
 export function getDevServerEnv({ serverPort, miniappOrigin }) {
   return {
-    BOT_MODE: "webhook",
+    BOT_MODE: "polling",
     PORT: String(serverPort),
     MINI_APP_URL: miniappOrigin,
     PUBLIC_BASE_URL: miniappOrigin

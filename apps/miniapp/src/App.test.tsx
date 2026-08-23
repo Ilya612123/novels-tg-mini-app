@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -9,6 +9,7 @@ describe("App", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -27,6 +28,210 @@ describe("App", () => {
 
     await waitFor(() => expect(screen.getByText("Книги")).toBeTruthy());
     expect(screen.getByText("Профиль")).toBeTruthy();
+  });
+
+  it("logs catalog loading start and rendered events", async () => {
+    const fetchMock = vi.fn((url: string, _options?: RequestInit) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "загрузка Каталога началась" })
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "Каталог отрендерился", metadata: { bookCount: 0 } })
+        })
+      )
+    );
+  });
+
+  it("batches catalog scroll events into one directional analytics event", async () => {
+    const fetchMock = vi.fn((url: string, _options?: RequestInit) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    const pageScrollRoot = await screen.findByTestId("page-scroll-root");
+    fireEvent.wheel(pageScrollRoot);
+    pageScrollRoot.scrollTop = 10;
+    fireEvent.scroll(pageScrollRoot);
+    pageScrollRoot.scrollTop = 54;
+    fireEvent.scroll(pageScrollRoot);
+    pageScrollRoot.scrollTop = 97;
+    fireEvent.scroll(pageScrollRoot);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "скролл Каталога вниз", metadata: { startScrollTop: 10, endScrollTop: 97 } })
+        })
+      )
+    );
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url, options]) =>
+          String(url).endsWith("/api/analytics") &&
+          typeof options === "object" &&
+          options !== null &&
+          "body" in options &&
+          typeof options.body === "string" &&
+          options.body.includes("скролл Каталога")
+      )
+    ).toHaveLength(1);
+  });
+
+  it("does not log catalog scroll events from search-driven layout changes", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              {
+                id: "book-1",
+                title: "Башня Бога",
+                author: "SIU",
+                description: "Фэнтези",
+                coverUrl: null,
+                chapterCount: 10,
+                freeChapterLimit: 3,
+                rating: { averageScore: 9.1, reviewCount: 100, distribution: [] },
+                progress: null,
+                tags: ["фэнтези"]
+              }
+            ]),
+            { status: 200 }
+          )
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByRole("searchbox", { name: "Поиск по книгам" }), { target: { value: "баш" } });
+    const pageScrollRoot = screen.getByTestId("page-scroll-root");
+    pageScrollRoot.scrollTop = 80;
+    fireEvent.scroll(pageScrollRoot);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "искал в Каталоге", metadata: { query: "баш", resultCount: 1 } })
+        })
+      )
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("скролл Каталога")
+      })
+    );
+  });
+
+  it("logs catalog search queries with the local result count", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              {
+                id: "book-1",
+                title: "Башня Бога",
+                author: "SIU",
+                description: "Фэнтези",
+                coverUrl: null,
+                chapterCount: 10,
+                freeChapterLimit: 3,
+                rating: { averageScore: 9.1, reviewCount: 100, distribution: [] },
+                progress: null,
+                tags: ["фэнтези"]
+              },
+              {
+                id: "book-2",
+                title: "Поднятие уровня в одиночку",
+                author: "Chugong",
+                description: "Экшен",
+                coverUrl: null,
+                chapterCount: 12,
+                freeChapterLimit: 3,
+                rating: { averageScore: 8.8, reviewCount: 80, distribution: [] },
+                progress: null,
+                tags: ["экшен"]
+              }
+            ]),
+            { status: 200 }
+          )
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByRole("searchbox", { name: "Поиск по книгам" }), { target: { value: "  уров  " } });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "искал в Каталоге", metadata: { query: "уров", resultCount: 1 } })
+        })
+      )
+    );
+  });
+
+  it("logs Mini App activity while the app stays open", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "активен в Mini App", metadata: { elapsedSec: 10 } })
+      })
+    );
   });
 
   it("shows a readable Telegram launch error when auth data is missing", async () => {

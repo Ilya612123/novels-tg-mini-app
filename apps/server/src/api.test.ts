@@ -201,17 +201,20 @@ describe("createApiServer", () => {
   });
 
   it("sets Telegram webhook and runtime Mini App URL in local dev", async () => {
+    const deleteWebhook = vi.fn().mockResolvedValue(true);
     const setWebhook = vi.fn().mockResolvedValue(true);
     const localConfig = { ...config, BOT_MODE: "webhook" as const };
     const app = createApiServer({
       config: localConfig,
       db: testDb.db,
-      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot
+      bot: { api: { deleteWebhook, setWebhook }, isRunning: () => false } as unknown as Bot
     });
 
     const res = await request(app).post("/dev/setup-webhook").send({ publicUrl: "https://reader.trycloudflare.com/" }).expect(200);
 
+    expect(deleteWebhook).toHaveBeenCalledWith({ drop_pending_updates: true });
     expect(setWebhook).toHaveBeenCalledWith("https://reader.trycloudflare.com/telegram/webhook");
+    expect(deleteWebhook.mock.invocationCallOrder[0]).toBeLessThan(setWebhook.mock.invocationCallOrder[0]);
     expect(localConfig.MINI_APP_URL).toBe("https://reader.trycloudflare.com");
     expect(res.body).toEqual({
       ok: true,
@@ -251,6 +254,7 @@ describe("createApiServer", () => {
   });
 
   it("retries transient Telegram webhook DNS failures in local dev", async () => {
+    const deleteWebhook = vi.fn().mockResolvedValue(true);
     const setWebhook = vi
       .fn()
       .mockRejectedValueOnce(new Error("Bad Request: bad webhook: Failed to resolve host: Name or service not known"))
@@ -259,7 +263,7 @@ describe("createApiServer", () => {
     const app = createApiServer({
       config: localConfig,
       db: testDb.db,
-      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      bot: { api: { deleteWebhook, setWebhook }, isRunning: () => false } as unknown as Bot,
       devWebhookRetryDelayMs: 0
     });
 
@@ -276,6 +280,7 @@ describe("createApiServer", () => {
 
   it("keeps retrying Telegram webhook DNS failures long enough for fresh tunnel hosts", async () => {
     const transientFailure = new Error("Bad Request: bad webhook: Failed to resolve host: Name or service not known");
+    const deleteWebhook = vi.fn().mockResolvedValue(true);
     const setWebhook = vi.fn();
     for (let attempt = 0; attempt < 75; attempt += 1) {
       setWebhook.mockRejectedValueOnce(transientFailure);
@@ -284,7 +289,7 @@ describe("createApiServer", () => {
     const app = createApiServer({
       config: { ...config, BOT_MODE: "webhook" as const },
       db: testDb.db,
-      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      bot: { api: { deleteWebhook, setWebhook }, isRunning: () => false } as unknown as Bot,
       devWebhookRetryDelayMs: 0
     });
 
@@ -298,11 +303,12 @@ describe("createApiServer", () => {
       error_code: 429,
       parameters: { retry_after: 1 }
     });
+    const deleteWebhook = vi.fn().mockResolvedValue(true);
     const setWebhook = vi.fn().mockRejectedValueOnce(rateLimitError).mockResolvedValueOnce(true);
     const app = createApiServer({
       config: { ...config, BOT_MODE: "webhook" as const },
       db: testDb.db,
-      bot: { api: { setWebhook }, isRunning: () => false } as unknown as Bot,
+      bot: { api: { deleteWebhook, setWebhook }, isRunning: () => false } as unknown as Bot,
       devWebhookRetryDelayMs: 0
     });
 

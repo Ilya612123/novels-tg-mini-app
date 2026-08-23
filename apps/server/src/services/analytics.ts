@@ -18,12 +18,23 @@ export async function createAnalyticsEvent(db: DbClient, input: AnalyticsInput):
   return recordAnalyticsEvent(db, input);
 }
 
+function parseAnalyticsMetadata(metadata: string | null): unknown {
+  if (!metadata) return undefined;
+
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    return undefined;
+  }
+}
+
 function toFormattedAnalyticsEvent(event: AnalyticsEvent): AnalyticsEventForFormat {
   return {
     userId: event.userId,
     username: event.username,
     occurredAt: event.occurredAt,
     label: event.label,
+    metadata: parseAnalyticsMetadata(event.metadata),
     source: event.source === "bot" ? "bot" : ("miniapp" as const)
   };
 }

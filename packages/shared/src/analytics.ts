@@ -5,6 +5,7 @@ export type AnalyticsEventForFormat = {
   username: string | null;
   occurredAt: Date;
   label: string;
+  metadata?: unknown;
   source: AnalyticsEventSource;
 };
 
@@ -27,6 +28,26 @@ function formatMinute(date: Date): string {
   return formatTime(date).slice(0, 5);
 }
 
+function formatMetadataValue(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function formatMetadata(metadata: unknown): string {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return "";
+
+  const parts = Object.entries(metadata)
+    .map(([key, value]) => {
+      const formattedValue = formatMetadataValue(value);
+      return formattedValue == null ? null : `${key}=${formattedValue}`;
+    })
+    .filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+}
+
 export function formatAnalyticsBatch(input: AnalyticsBatchInput): string | null {
   if (input.events.length === 0) return null;
 
@@ -45,7 +66,7 @@ export function formatAnalyticsBatch(input: AnalyticsBatchInput): string | null 
     lines.push(`user ${userId}${username ? ` @${username}` : ""}`);
 
     for (const event of events) {
-      lines.push(`  ${formatTime(event.occurredAt)} ${event.label}`);
+      lines.push(`  ${formatTime(event.occurredAt)} ${event.label}${formatMetadata(event.metadata)}`);
     }
 
     const miniappEvents = events.filter((event) => event.source === "miniapp");

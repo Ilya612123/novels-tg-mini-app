@@ -27,6 +27,14 @@ describe("formatAnalyticsBatch", () => {
           occurredAt: new Date("2026-08-11T09:21:24.000Z"),
           label: "начал читать Главу 1",
           source: "miniapp"
+        },
+        {
+          userId: "5100586818",
+          username: "barboruss",
+          occurredAt: new Date("2026-08-11T09:21:34.000Z"),
+          label: "искал в Каталоге",
+          metadata: { query: "баш", resultCount: 1 },
+          source: "miniapp"
         }
       ]
     });
@@ -34,7 +42,8 @@ describe("formatAnalyticsBatch", () => {
     expect(text).toContain("Логи за 12:21-12:22");
     expect(text).toContain("user 5100586818 @barboruss");
     expect(text).toContain("12:21:03 старт бота");
-    expect(text).toContain("активность в mini app: 13 сек");
+    expect(text).toContain("12:21:34 искал в Каталоге query=баш resultCount=1");
+    expect(text).toContain("активность в mini app: 23 сек");
   });
 
   it("returns null without events", () => {

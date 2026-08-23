@@ -26,6 +26,7 @@ model Book {
   title            String
   author           String?
   description      String?
+  tagsJson         String?
   coverPath        String?
   chapterCount     Int
   freeChapterLimit Int

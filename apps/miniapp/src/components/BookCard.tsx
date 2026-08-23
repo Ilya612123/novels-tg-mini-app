@@ -3,7 +3,6 @@ import type { BookSummary } from "@novell-reader/shared";
 const lowPriorityImageProps = { fetchpriority: "low" };
 
 export function BookCard({ book, onOpen }: { book: BookSummary; onOpen: (bookId: string) => void }) {
-  const progressText = book.progress ? `Глава ${book.progress.chapterNumber}` : `${book.chapterCount} глав`;
   const ratingText = book.rating.averageScore.toFixed(1);
 
   return (
@@ -17,10 +16,9 @@ export function BookCard({ book, onOpen }: { book: BookSummary; onOpen: (bookId:
         ) : (
           <span>{book.title.slice(0, 1)}</span>
         )}
-      </div>
-      <div className="book-card-text">
-        <h3>{book.title}</h3>
-        <p>{progressText}</p>
+        <div className="book-card-text">
+          <h3>{book.title}</h3>
+        </div>
       </div>
     </button>
   );

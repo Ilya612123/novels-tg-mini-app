@@ -30,6 +30,12 @@ describe("BookCard", () => {
     expect(screen.getByLabelText("Средняя оценка 9.7 из 10").textContent).toBe("9.7");
   });
 
+  it("keeps chapter counts off the cover preview", () => {
+    render(<BookCard book={book} onOpen={vi.fn()} />);
+
+    expect(screen.queryByText("551 глав")).toBeNull();
+  });
+
   it("loads cover images lazily without blocking decode", () => {
     render(<BookCard book={{ ...book, coverUrl: "/content/imported/book-1/cover.webp" }} onOpen={vi.fn()} />);
 

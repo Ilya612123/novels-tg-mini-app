@@ -5,7 +5,7 @@ dist/
 *.db-journal
 apps/miniapp/vite.config.js
 package-lock.json
-
+.env
 # Local backup files
 *.bak-*
 
