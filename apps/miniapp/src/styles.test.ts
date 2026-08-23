@@ -37,6 +37,10 @@ describe("miniapp design system", () => {
   it("lays out catalog cards as three cover-first columns with readable overlaid titles", () => {
     expect(css).toContain("--book-card-overlay-min-height: calc(var(--line-height-book-preview) * var(--book-title-lines))");
     expect(css).toContain("--gradient-cover-title-overlay: linear-gradient");
+    expect(css).toContain("--catalog-search-icon-size: 20px");
+    expect(css).toMatch(/\.catalog-search\s*{[^}]*min-height:\s*var\(--control-height-md\)/s);
+    expect(css).toMatch(/\.catalog-search\s*{[^}]*padding:\s*0 var\(--space-3\)/s);
+    expect(css).toMatch(/\.catalog-search input\s*{[^}]*height:\s*var\(--control-height-sm\)/s);
     expect(css).toMatch(/\.book-grid\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
     expect(css).toMatch(/\.book-card\s*{[^}]*display:\s*block/s);
     expect(css).toMatch(/\.book-card-text\s*{[^}]*position:\s*absolute/s);

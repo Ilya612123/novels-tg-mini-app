@@ -46,6 +46,27 @@ describe("flushAnalyticsToTelegram", () => {
     expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(0);
   });
 
+  it("includes event metadata in the Telegram analytics digest", async () => {
+    await recordAnalyticsEvent(testDb.db, {
+      userId: "5100586818",
+      username: "barboruss",
+      source: "miniapp",
+      label: "искал в Каталоге",
+      metadata: { query: "баш", resultCount: 1 },
+      occurredAt: new Date("2026-08-11T09:21:03.000Z")
+    });
+
+    const sendMessage = vi.fn().mockResolvedValue({});
+    await flushAnalyticsToTelegram({
+      db: testDb.db,
+      bot: { api: { sendMessage } } as unknown as Bot,
+      chatId: "-1001",
+      now: new Date("2026-08-11T09:22:00.000Z")
+    });
+
+    expect(sendMessage.mock.calls[0]![1]).toContain("искал в Каталоге query=баш resultCount=1");
+  });
+
   it("splits large analytics digests into Telegram-sized messages", async () => {
     const occurredAt = new Date("2026-08-11T09:21:03.000Z");
     for (let index = 0; index < 260; index += 1) {

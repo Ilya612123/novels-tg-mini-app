@@ -76,6 +76,26 @@ describe("ReaderScreen", () => {
     expect(screen.getByRole("heading", { name: "Глава 1" }).closest(".reader-title-block")).not.toBeNull();
   });
 
+  it("logs reading analytics with the readable book title", () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const scrollRootRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={scrollRootRef}>
+        <ReaderScreen chapter={chapter} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
+      </div>
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "начал читать Главу 1", metadata: { bookTitle: "Башня Бога" } })
+      })
+    );
+  });
+
   it("moves to the next chapter from the final page", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
@@ -100,5 +120,36 @@ describe("ReaderScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
     expect(onNavigate).toHaveBeenCalledWith(2);
+  });
+
+  it("logs chapter navigation analytics with the readable book title", () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+    mockColumnGap("16px");
+    const onNavigate = vi.fn();
+
+    const scrollRootRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={scrollRootRef}>
+        <ReaderScreen chapter={chapter} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
+      </div>
+    );
+
+    const chapterPager = screen.getByTestId("chapter-pager");
+    Object.defineProperty(chapterPager, "clientWidth", { configurable: true, value: 320 });
+    Object.defineProperty(chapterPager, "scrollWidth", { configurable: true, value: 320 });
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "перешел на следующую главу", metadata: { bookTitle: "Башня Бога", chapterNumber: 1 } })
+      })
+    );
   });
 });

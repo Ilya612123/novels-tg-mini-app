@@ -74,8 +74,8 @@ export function ReaderScreen({
 
   useEffect(() => {
     api.saveProgress(progressPayload).catch(console.error);
-    api.analytics(`начал читать Главу ${chapter.number}`, { bookId: chapter.bookId }).catch(console.error);
-  }, [chapter.bookId, chapter.number, progressPayload]);
+    api.analytics(`начал читать Главу ${chapter.number}`, { bookTitle }).catch(console.error);
+  }, [bookTitle, chapter.number, progressPayload]);
 
   const goToPreviousPage = () => {
     if (pageIndex > 0) {
@@ -85,7 +85,7 @@ export function ReaderScreen({
       return;
     }
 
-    api.analytics("перешел на предыдущую главу", { bookId: chapter.bookId, chapterNumber: chapter.number }).catch(console.error);
+    api.analytics("перешел на предыдущую главу", { bookTitle, chapterNumber: chapter.number }).catch(console.error);
     onNavigate(Math.max(1, chapter.number - 1));
   };
 
@@ -97,7 +97,7 @@ export function ReaderScreen({
       return;
     }
 
-    api.analytics("перешел на следующую главу", { bookId: chapter.bookId, chapterNumber: chapter.number }).catch(console.error);
+    api.analytics("перешел на следующую главу", { bookTitle, chapterNumber: chapter.number }).catch(console.error);
     onNavigate(chapter.number + 1);
   };
 
