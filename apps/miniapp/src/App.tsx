@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { UIEvent } from "react";
 import { publicSubscriptionPlans, type BookSummary, type ChapterDto, type PaywallWinbackOffer, type SubscriptionPlan } from "@novell-reader/shared";
 import { ApiError, api } from "./api/client";
 import type { Tab } from "./components/BottomNav";
@@ -29,6 +30,7 @@ type AppError = {
 };
 
 const supportUrl = "https://t.me/esimsmile_support";
+const MINI_APP_ACTIVITY_LOG_INTERVAL_MS = 10_000;
 
 function toAppError(err: unknown, fallbackMessage: string): AppError {
   if (err instanceof ApiError) return { status: err.status, message: err.message };
@@ -62,6 +64,7 @@ export function App() {
 
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
+    api.analytics("загрузка Каталога началась").catch(console.error);
     api
       .books()
       .then((items) => {
@@ -71,6 +74,20 @@ export function App() {
       .catch((err: unknown) => setError(toAppError(err, "Не удалось загрузить книги")))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const openedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      api.analytics("активен в Mini App", { elapsedSec: Math.round((Date.now() - openedAt) / 1000) }).catch(console.error);
+    }, MINI_APP_ACTIVITY_LOG_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (loading || error || view.name !== "catalog") return;
+    api.analytics("Каталог отрендерился", { bookCount: books.length }).catch(console.error);
+  }, [books.length, error, loading, view.name]);
 
   useEffect(() => {
     if (view.name !== "paywall") return;
@@ -90,6 +107,14 @@ export function App() {
   }, [books, view]);
 
   const similarBooks = useMemo(() => (currentBook ? pickSimilarBooks(books, currentBook.id) : []), [books, currentBook]);
+
+  const handlePageScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      if (view.name !== "catalog") return;
+      api.analytics("скролл Каталога", { scrollTop: event.currentTarget.scrollTop }).catch(console.error);
+    },
+    [view.name]
+  );
 
   const openBook = (bookId: string) => {
     setView({ name: "novel", bookId });
@@ -179,7 +204,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <div className={pageScrollClassName} data-testid="page-scroll-root" key={viewKey} ref={pageScrollRootRef}>
+      <div className={pageScrollClassName} data-testid="page-scroll-root" key={viewKey} onScroll={handlePageScroll} ref={pageScrollRootRef}>
         <Suspense fallback={<LoadingState />}>
           {view.name === "catalog" && <CatalogScreen books={books} onOpenBook={openBook} />}
           {view.name === "profile" && (

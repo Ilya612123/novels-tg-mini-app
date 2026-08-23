@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -9,6 +9,7 @@ describe("App", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -27,6 +28,88 @@ describe("App", () => {
 
     await waitFor(() => expect(screen.getByText("Книги")).toBeTruthy());
     expect(screen.getByText("Профиль")).toBeTruthy();
+  });
+
+  it("logs catalog loading start and rendered events", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "загрузка Каталога началась" })
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "Каталог отрендерился", metadata: { bookCount: 0 } })
+        })
+      )
+    );
+  });
+
+  it("logs catalog scroll events", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    const pageScrollRoot = await screen.findByTestId("page-scroll-root");
+    pageScrollRoot.scrollTop = 120;
+    fireEvent.scroll(pageScrollRoot);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "скролл Каталога", metadata: { scrollTop: 120 } })
+        })
+      )
+    );
+  });
+
+  it("logs Mini App activity while the app stays open", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "активен в Mini App", metadata: { elapsedSec: 10 } })
+      })
+    );
   });
 
   it("shows a readable Telegram launch error when auth data is missing", async () => {
