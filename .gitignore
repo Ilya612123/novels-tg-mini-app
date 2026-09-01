@@ -8,6 +8,7 @@ package-lock.json
 .env
 # Local backup files
 *.bak-*
+local-db-dumps/
 
 # Generated converted images
 *.webp
