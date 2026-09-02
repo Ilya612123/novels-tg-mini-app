@@ -12,3 +12,4 @@ local-db-dumps/
 
 # Generated converted images
 *.webp
+.env
