@@ -32,6 +32,14 @@ docker compose up -d --build
 
 Данные SQLite хранятся в Docker volume `novell-reader-data`. Папка `content` монтируется с хоста, поэтому EPUB и импортированный контент остаются рядом с репозиторием после перезапусков.
 
+Telegram Ads attribution запускается вместе с backend. Настройки интервалов и окон:
+`TELEGRAM_ADS_COLLECT_INTERVAL_MS`, `TELEGRAM_ADS_MATCH_INTERVAL_MS`,
+`TELEGRAM_ADS_MATCH_WINDOW_BEFORE_SECONDS`, `TELEGRAM_ADS_MATCH_WINDOW_AFTER_SECONDS`,
+`TELEGRAM_ADS_UNKNOWN_AFTER_SECONDS`.
+
+Collector MVP ходит на `https://ads.telegram.org/account` и использует auth из `TELEGRAM_ADS_COOKIE` или `TELEGRAM_ADS_REQUEST_HEADERS_JSON`. Он читает `initialAdsList.items` из HTML кабинета. Если URL или сессия недоступны, collector сохраняет failed snapshot и не останавливает backend.
+При похожей на истекшую cookie ошибке backend один раз за failure streak отправляет уведомление в `ANALYTICS_USER_ID`.
+
 Проверка:
 
 ```bash

@@ -3,6 +3,7 @@ import type { Bot } from "grammy";
 import { formatAnalyticsBatch, type AnalyticsEventForFormat } from "@novell-reader/shared";
 import type { DbClient } from "../db.js";
 import { listUnflushedAnalyticsEvents, markAnalyticsEventsFlushed, recordAnalyticsEvent } from "../repositories/analytics.js";
+import { findAttributionForStartEvent } from "../repositories/userAttributions.js";
 
 const ANALYTICS_EVENTS_PER_MESSAGE = 50;
 
@@ -28,22 +29,59 @@ function parseAnalyticsMetadata(metadata: string | null): unknown {
   }
 }
 
-function toFormattedAnalyticsEvent(event: AnalyticsEvent): AnalyticsEventForFormat {
+function metadataObject(metadata: unknown): Record<string, unknown> | null {
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : null;
+}
+
+function formatAttributionLine(attribution: {
+  status: string;
+  primarySource: string | null;
+  candidatesJson: string | null;
+}): string {
+  if (attribution.status === "likely" && attribution.primarySource) {
+    return `атрибуция: likely, ${attribution.primarySource}`;
+  }
+  if (attribution.status === "ambiguous") {
+    let candidates: Array<{ adTitle?: string }> = [];
+    try {
+      candidates = JSON.parse(attribution.candidatesJson ?? "[]") as Array<{ adTitle?: string }>;
+    } catch {
+      candidates = [];
+    }
+    const titles = candidates.map((candidate) => candidate.adTitle).filter((title): title is string => Boolean(title));
+    return `атрибуция: ambiguous, варианты: ${titles.join(", ")}`;
+  }
+  return "атрибуция: unknown";
+}
+
+async function toFormattedAnalyticsEvent(db: DbClient, event: AnalyticsEvent): Promise<AnalyticsEventForFormat> {
+  const metadata = parseAnalyticsMetadata(event.metadata);
+  const objectMetadata = metadataObject(metadata);
+  let label = event.label;
+  let formattedMetadata = metadata;
+
+  if (event.source === "bot" && event.label === "старт бота" && typeof objectMetadata?.botStartEventId === "string") {
+    const attribution = await findAttributionForStartEvent(db, objectMetadata.botStartEventId);
+    const { botStartEventId: _botStartEventId, ...publicMetadata } = objectMetadata;
+    formattedMetadata = Object.keys(publicMetadata).length > 0 ? publicMetadata : undefined;
+    if (attribution) label = `${label}\n    ${formatAttributionLine(attribution)}`;
+  }
+
   return {
     userId: event.userId,
     username: event.username,
     occurredAt: event.occurredAt,
-    label: event.label,
-    metadata: parseAnalyticsMetadata(event.metadata),
+    label,
+    metadata: formattedMetadata,
     source: event.source === "bot" ? "bot" : ("miniapp" as const)
   };
 }
 
-function formatAnalyticsEvents(events: AnalyticsEvent[], now: Date): string | null {
+async function formatAnalyticsEvents(db: DbClient, events: AnalyticsEvent[], now: Date): Promise<string | null> {
   return formatAnalyticsBatch({
     from: events[0]!.occurredAt,
     to: now,
-    events: events.map(toFormattedAnalyticsEvent)
+    events: await Promise.all(events.map((event) => toFormattedAnalyticsEvent(db, event)))
   });
 }
 
@@ -67,7 +105,7 @@ export async function flushAnalyticsToTelegram(input: {
 
   let sentCount = 0;
   for (const batch of splitAnalyticsEvents(events, now)) {
-    const text = formatAnalyticsEvents(batch, now);
+    const text = await formatAnalyticsEvents(input.db, batch, now);
     if (!text) continue;
 
     await input.bot.api.sendMessage(input.chatId, text);

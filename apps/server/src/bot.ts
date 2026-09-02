@@ -3,6 +3,7 @@ import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db.js";
 import { extendAccessByDays } from "./repositories/access.js";
 import { recordAnalyticsEvent } from "./repositories/analytics.js";
+import { recordBotStartEvent } from "./repositories/botStarts.js";
 import { markPaymentPaid } from "./repositories/payments.js";
 import { upsertTelegramUser } from "./repositories/users.js";
 
@@ -24,12 +25,17 @@ export function createBot(deps: BotDeps): Bot {
       firstName: from.first_name ?? null,
       lastName: from.last_name ?? null
     });
+    const botStartEvent = await recordBotStartEvent(deps.db, {
+      userId: String(from.id),
+      username: from.username ?? null
+    });
 
     await recordAnalyticsEvent(deps.db, {
       userId: String(from.id),
       username: from.username ?? null,
       source: "bot",
-      label: "старт бота"
+      label: "старт бота",
+      metadata: { botStartEventId: botStartEvent.id }
     });
 
     const keyboard = new InlineKeyboard()

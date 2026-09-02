@@ -19,6 +19,8 @@ model TelegramUser {
   payments        Payment[]
   analyticsEvents AnalyticsEvent[]
   paywallWinbackImpressions PaywallWinbackImpression[]
+  botStartEvents  BotStartEvent[]
+  attributions    UserAttribution[]
 }
 
 model Book {
@@ -98,6 +100,79 @@ model AnalyticsEvent {
   user       TelegramUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([flushedAt, occurredAt])
+}
+
+model BotStartEvent {
+  id             String           @id @default(cuid())
+  userId         String
+  username       String?
+  occurredAt     DateTime         @default(now())
+  isFirstStart   Boolean
+  user           TelegramUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attribution    UserAttribution?
+
+  @@index([occurredAt])
+  @@index([userId])
+}
+
+model TelegramAdsSnapshot {
+  id           String             @id @default(cuid())
+  collectedAt  DateTime           @default(now())
+  status       String
+  errorMessage String?
+  rawPayload   String?
+  metrics      TelegramAdMetric[]
+
+  @@index([collectedAt])
+  @@index([status])
+}
+
+model TelegramAdMetric {
+  id         String              @id @default(cuid())
+  snapshotId String
+  adKey      String
+  adTitle    String
+  views      Int
+  clicks     Int
+  actions    Int
+  spent      Float
+  snapshot   TelegramAdsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, adKey])
+  @@index([adKey])
+}
+
+model TelegramAdActionDelta {
+  id             String   @id @default(cuid())
+  adKey          String
+  adTitle        String
+  delta          Int
+  observedFrom   DateTime
+  observedTo     DateTime
+  fromSnapshotId String?
+  toSnapshotId   String?
+
+  @@index([observedFrom])
+  @@index([observedTo])
+  @@index([adKey])
+}
+
+model UserAttribution {
+  id                 String         @id @default(cuid())
+  userId             String
+  botStartEventId    String         @unique
+  status             String
+  primarySource      String?
+  candidatesJson     String?
+  matchedWindowFrom  DateTime
+  matchedWindowTo    DateTime
+  createdAt          DateTime       @default(now())
+  user               TelegramUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botStartEvent      BotStartEvent  @relation(fields: [botStartEventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PaywallWinbackImpression {

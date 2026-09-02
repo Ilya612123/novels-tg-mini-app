@@ -82,6 +82,55 @@ const SCHEMA_SQL = [
     "flushedAt" DATETIME,
     CONSTRAINT "AnalyticsEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
+  `CREATE TABLE "BotStartEvent" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "username" TEXT,
+    "occurredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isFirstStart" BOOLEAN NOT NULL,
+    CONSTRAINT "BotStartEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE "TelegramAdsSnapshot" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "collectedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" TEXT NOT NULL,
+    "errorMessage" TEXT,
+    "rawPayload" TEXT
+  )`,
+  `CREATE TABLE "TelegramAdMetric" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "snapshotId" TEXT NOT NULL,
+    "adKey" TEXT NOT NULL,
+    "adTitle" TEXT NOT NULL,
+    "views" INTEGER NOT NULL,
+    "clicks" INTEGER NOT NULL,
+    "actions" INTEGER NOT NULL,
+    "spent" REAL NOT NULL,
+    CONSTRAINT "TelegramAdMetric_snapshotId_fkey" FOREIGN KEY ("snapshotId") REFERENCES "TelegramAdsSnapshot" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE "TelegramAdActionDelta" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "adKey" TEXT NOT NULL,
+    "adTitle" TEXT NOT NULL,
+    "delta" INTEGER NOT NULL,
+    "observedFrom" DATETIME NOT NULL,
+    "observedTo" DATETIME NOT NULL,
+    "fromSnapshotId" TEXT,
+    "toSnapshotId" TEXT
+  )`,
+  `CREATE TABLE "UserAttribution" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "botStartEventId" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "primarySource" TEXT,
+    "candidatesJson" TEXT,
+    "matchedWindowFrom" DATETIME NOT NULL,
+    "matchedWindowTo" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "UserAttribution_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "UserAttribution_botStartEventId_fkey" FOREIGN KEY ("botStartEventId") REFERENCES "BotStartEvent" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
   `CREATE TABLE "PaywallWinbackImpression" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
@@ -93,6 +142,19 @@ const SCHEMA_SQL = [
   `CREATE UNIQUE INDEX "ReadingProgress_userId_bookId_key" ON "ReadingProgress"("userId", "bookId")`,
   `CREATE UNIQUE INDEX "Payment_providerPayload_key" ON "Payment"("providerPayload")`,
   `CREATE INDEX "AnalyticsEvent_flushedAt_occurredAt_idx" ON "AnalyticsEvent"("flushedAt", "occurredAt")`,
+  `CREATE INDEX "BotStartEvent_occurredAt_idx" ON "BotStartEvent"("occurredAt")`,
+  `CREATE INDEX "BotStartEvent_userId_idx" ON "BotStartEvent"("userId")`,
+  `CREATE INDEX "TelegramAdsSnapshot_collectedAt_idx" ON "TelegramAdsSnapshot"("collectedAt")`,
+  `CREATE INDEX "TelegramAdsSnapshot_status_idx" ON "TelegramAdsSnapshot"("status")`,
+  `CREATE UNIQUE INDEX "TelegramAdMetric_snapshotId_adKey_key" ON "TelegramAdMetric"("snapshotId", "adKey")`,
+  `CREATE INDEX "TelegramAdMetric_adKey_idx" ON "TelegramAdMetric"("adKey")`,
+  `CREATE INDEX "TelegramAdActionDelta_observedFrom_idx" ON "TelegramAdActionDelta"("observedFrom")`,
+  `CREATE INDEX "TelegramAdActionDelta_observedTo_idx" ON "TelegramAdActionDelta"("observedTo")`,
+  `CREATE INDEX "TelegramAdActionDelta_adKey_idx" ON "TelegramAdActionDelta"("adKey")`,
+  `CREATE UNIQUE INDEX "UserAttribution_botStartEventId_key" ON "UserAttribution"("botStartEventId")`,
+  `CREATE INDEX "UserAttribution_userId_idx" ON "UserAttribution"("userId")`,
+  `CREATE INDEX "UserAttribution_status_idx" ON "UserAttribution"("status")`,
+  `CREATE INDEX "UserAttribution_createdAt_idx" ON "UserAttribution"("createdAt")`,
   `CREATE UNIQUE INDEX "PaywallWinbackImpression_userId_offerId_key" ON "PaywallWinbackImpression"("userId", "offerId")`
 ];
 
