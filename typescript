@@ -1,0 +1,8 @@
+Script started on Wed Sep  2 10:52:49 2026
+^Dmkdir: /Users/ilapronin/.cache/oh-my-zsh: Operation not permitted
+rm: /Users/ilapronin/.zcompdump-Ilas-MacBook-Pro-5.9: Operation not permitted
+zsh: locking failed for /Users/ilapronin/.zsh_history: operation not permitted: reading anyway
+%                                                                               [01;32m?➜  [36mnovell-reader[00m [?2004h[?2004l
+zsh: locking failed for /Users/ilapronin/.zsh_history: operation not permitted
+
+Script done on Wed Sep  2 10:52:50 2026
