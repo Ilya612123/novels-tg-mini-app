@@ -93,14 +93,21 @@ function splitAnalyticsEvents(events: AnalyticsEvent[], now: Date): AnalyticsEve
   return batches;
 }
 
+function isDelayedBotStartEvent(event: AnalyticsEvent, now: Date, delaySeconds: number): boolean {
+  if (delaySeconds <= 0) return false;
+  return event.source === "bot" && event.label === "старт бота" && now.getTime() - event.occurredAt.getTime() < delaySeconds * 1000;
+}
+
 export async function flushAnalyticsToTelegram(input: {
   db: DbClient;
   bot: Bot;
   chatId: string;
   now?: Date;
+  botStartDelaySeconds?: number;
 }): Promise<{ sent: boolean; eventCount: number }> {
   const now = input.now ?? new Date();
-  const events = await listUnflushedAnalyticsEvents(input.db, now);
+  const allEvents = await listUnflushedAnalyticsEvents(input.db, now);
+  const events = allEvents.filter((event) => !isDelayedBotStartEvent(event, now, input.botStartDelaySeconds ?? 0));
   if (events.length === 0) return { sent: false, eventCount: 0 };
 
   let sentCount = 0;

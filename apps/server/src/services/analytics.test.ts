@@ -163,4 +163,33 @@ describe("flushAnalyticsToTelegram", () => {
     expect(text).toContain("атрибуция: ambiguous, варианты: романтика, ранобэ");
     expect(text).toContain("атрибуция: unknown");
   });
+
+  it("delays bot start digest lines so attribution can be matched first", async () => {
+    await recordAnalyticsEvent(testDb.db, {
+      userId: "5100586818",
+      source: "bot",
+      label: "старт бота",
+      occurredAt: new Date("2026-08-11T09:21:03.000Z")
+    });
+    await recordAnalyticsEvent(testDb.db, {
+      userId: "5100586818",
+      source: "miniapp",
+      label: "открыл Mini App",
+      occurredAt: new Date("2026-08-11T09:21:11.000Z")
+    });
+
+    const sendMessage = vi.fn().mockResolvedValue({});
+    const result = await flushAnalyticsToTelegram({
+      db: testDb.db,
+      bot: { api: { sendMessage } } as unknown as Bot,
+      chatId: "-1001",
+      now: new Date("2026-08-11T09:22:00.000Z"),
+      botStartDelaySeconds: 600
+    });
+
+    expect(result).toEqual({ sent: true, eventCount: 1 });
+    expect(sendMessage.mock.calls[0]![1]).toContain("открыл Mini App");
+    expect(sendMessage.mock.calls[0]![1]).not.toContain("старт бота");
+    expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(1);
+  });
 });

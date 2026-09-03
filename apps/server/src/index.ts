@@ -22,7 +22,13 @@ if (config.BOT_MODE === "polling") {
 }
 
 setInterval(() => {
-  flushAnalyticsToTelegram({ db: prisma, bot, chatId: config.ANALYTICS_USER_ID }).catch(console.error);
+  flushAnalyticsToTelegram({
+    db: prisma,
+    bot,
+    chatId: config.ANALYTICS_USER_ID,
+    botStartDelaySeconds:
+      config.TELEGRAM_ADS_UNKNOWN_AFTER_SECONDS + Math.ceil(config.TELEGRAM_ADS_MATCH_INTERVAL_MS / 1000)
+  }).catch(console.error);
 }, 60_000);
 
 let isCollecting = false;
