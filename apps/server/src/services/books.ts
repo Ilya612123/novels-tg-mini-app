@@ -63,6 +63,50 @@ function stripDuplicatedLeadingTitle(html: string, title: string): string {
   return root.html() ?? "";
 }
 
+function normalizeLooseChapterParagraphs(html: string): string {
+  const $ = cheerio.load(html, null, false);
+  const root = $.root();
+  const normalized: string[] = [];
+  let paragraphParts: string[] = [];
+
+  function flushParagraph() {
+    const content = paragraphParts.join("").trim();
+    if (content) normalized.push(`<p>${content}</p>`);
+    paragraphParts = [];
+  }
+
+  for (const node of root.contents().toArray()) {
+    if (node.type === "text") {
+      const text = $(node).text().replace(/\s+/g, " ");
+      if (text.trim()) paragraphParts.push(text);
+      continue;
+    }
+
+    if (node.type !== "tag") continue;
+
+    const element = $(node);
+    const tagName = element.prop("tagName")?.toLowerCase();
+    if (tagName === "br") {
+      flushParagraph();
+      continue;
+    }
+
+    const outerHtml = $.html(node).trim();
+    if (!outerHtml) continue;
+
+    if (["b", "strong", "i", "em"].includes(tagName ?? "")) {
+      paragraphParts.push(outerHtml);
+      continue;
+    }
+
+    flushParagraph();
+    normalized.push(outerHtml);
+  }
+
+  flushParagraph();
+  return normalized.length > 0 ? normalized.join("\n") : html;
+}
+
 export async function listBooksForUser(db: DbClient, userId: string): Promise<BookSummary[]> {
   const [books, progress] = await Promise.all([listPublishedBooks(db), listProgressForUser(db, userId)]);
   const progressByBook = new Map(progress.map((item) => [item.bookId, item]));
@@ -122,7 +166,7 @@ export async function getChapterForUser(
 
   if (!state.canRead) return state;
 
-  const html = stripDuplicatedLeadingTitle(await fs.readFile(path.join(contentRoot, chapter.contentPath), "utf8"), chapter.title);
+  const html = normalizeLooseChapterParagraphs(stripDuplicatedLeadingTitle(await fs.readFile(path.join(contentRoot, chapter.contentPath), "utf8"), chapter.title));
   return {
     id: chapter.id,
     bookId: chapter.bookId,

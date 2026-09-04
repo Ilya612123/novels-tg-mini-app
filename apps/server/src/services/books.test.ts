@@ -90,6 +90,29 @@ describe("chapters", () => {
 
     expect(chapter?.canRead).toBe(true);
     if (!chapter?.canRead) throw new Error("Expected readable chapter");
-    expect(chapter?.html).toBe("<br>Текст главы");
+    expect(chapter?.html).toBe("<p>Текст главы</p>");
+  });
+
+  it("normalizes loose br-separated chapter text into paragraphs", async () => {
+    await fs.mkdir(path.join(contentDir, "book-1", "chapters"), { recursive: true });
+    await fs.writeFile(
+      path.join(contentDir, "book-1", "chapters", "3.html"),
+      "<h2>Глава 3</h2><br />Первый абзац.<br />Второй <strong>абзац</strong>."
+    );
+    await testDb.db.chapter.create({
+      data: {
+        id: "book-1-3",
+        bookId: "book-1",
+        number: 3,
+        title: "Глава 3",
+        contentPath: "book-1/chapters/3.html"
+      }
+    });
+
+    const chapter = await getChapterForUser(testDb.db, "5100586818", "book-1", 3, contentDir);
+
+    expect(chapter?.canRead).toBe(true);
+    if (!chapter?.canRead) throw new Error("Expected readable chapter");
+    expect(chapter?.html).toBe("<p>Первый абзац.</p>\n<p>Второй <strong>абзац</strong>.</p>");
   });
 });

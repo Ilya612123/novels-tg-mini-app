@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChapterDto } from "@novell-reader/shared";
 import { createRef } from "react";
@@ -13,12 +13,6 @@ const chapter: ChapterDto = {
   canRead: true
 };
 
-function mockColumnGap(value: string) {
-  const style = document.createElement("div").style;
-  style.columnGap = value;
-  vi.spyOn(window, "getComputedStyle").mockReturnValue(style);
-}
-
 describe("ReaderScreen", () => {
   afterEach(() => {
     cleanup();
@@ -27,11 +21,9 @@ describe("ReaderScreen", () => {
     vi.useRealTimers();
   });
 
-  it("saves reading progress when paging through the chapter", () => {
-    vi.useFakeTimers();
+  it("renders the full chapter and saves reading progress when opening it", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
-    mockColumnGap("16px");
     const onNavigate = vi.fn();
 
     const scrollRootRef = createRef<HTMLDivElement>();
@@ -41,23 +33,13 @@ describe("ReaderScreen", () => {
       </div>
     );
 
-    const chapterPager = screen.getByTestId("chapter-pager");
-    Object.defineProperty(chapterPager, "clientWidth", { configurable: true, value: 320 });
-    Object.defineProperty(chapterPager, "scrollWidth", { configurable: true, value: 992 });
-    act(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Следующая страница" }));
-    vi.advanceTimersByTime(1000);
-
+    expect(screen.getByTestId("chapter-content").innerHTML).toBe("<p>Текст главы</p>");
     expect(onNavigate).not.toHaveBeenCalled();
-    expect(chapterPager.getAttribute("style")).toContain("translateX(-336px)");
-    expect(fetchMock).toHaveBeenLastCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/progress",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ bookId: "book-1", chapterNumber: 1, position: 1, percent: 50 })
+        body: JSON.stringify({ bookId: "book-1", chapterNumber: 1, position: 0, percent: null })
       })
     );
   });
@@ -96,10 +78,9 @@ describe("ReaderScreen", () => {
     );
   });
 
-  it("moves to the next chapter from the final page", () => {
+  it("moves to the next chapter from the bottom chapter actions", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
-    mockColumnGap("16px");
     const onNavigate = vi.fn();
 
     const scrollRootRef = createRef<HTMLDivElement>();
@@ -109,14 +90,6 @@ describe("ReaderScreen", () => {
       </div>
     );
 
-    const chapterPager = screen.getByTestId("chapter-pager");
-    Object.defineProperty(chapterPager, "clientWidth", { configurable: true, value: 320 });
-    Object.defineProperty(chapterPager, "scrollWidth", { configurable: true, value: 656 });
-    act(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Следующая страница" }));
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
     expect(onNavigate).toHaveBeenCalledWith(2);
@@ -125,7 +98,6 @@ describe("ReaderScreen", () => {
   it("logs chapter navigation analytics with the readable book title", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
-    mockColumnGap("16px");
     const onNavigate = vi.fn();
 
     const scrollRootRef = createRef<HTMLDivElement>();
@@ -134,13 +106,6 @@ describe("ReaderScreen", () => {
         <ReaderScreen chapter={chapter} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
       </div>
     );
-
-    const chapterPager = screen.getByTestId("chapter-pager");
-    Object.defineProperty(chapterPager, "clientWidth", { configurable: true, value: 320 });
-    Object.defineProperty(chapterPager, "scrollWidth", { configurable: true, value: 320 });
-    act(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 

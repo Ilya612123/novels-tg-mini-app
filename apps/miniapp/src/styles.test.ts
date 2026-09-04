@@ -76,21 +76,18 @@ describe("miniapp design system", () => {
     expect(css).toMatch(/\.paywall-screen\s*{[^}]*padding-bottom:\s*calc\(var\(--nav-height\) \+ var\(--paywall-buy-bar-reserve\) \+ var\(--space-5\)\)/s);
   });
 
-  it("lays out the reader as fixed-height pages instead of vertical scrolling text", () => {
+  it("lays out the reader as full-chapter vertical scrolling text", () => {
     expect(css).toContain("--reader-action-height: var(--control-height-sm)");
     expect(css).toContain("--reader-bottom-reserve: 0px");
-    expect(css).toContain("--reader-page-gap: var(--space-4)");
     expect(css).toContain("--reader-font-size: 16px");
     expect(css).toContain("--reader-line-height: 1.5");
-    expect(css).toMatch(/\.app-page-scroll-reader\s*{[^}]*overflow:\s*hidden/s);
+    expect(css).toMatch(/\.app-page-scroll-reader\s*{[^}]*overflow-y:\s*auto/s);
     expect(css).toMatch(/\.reader-screen\s*{[^}]*display:\s*flex/s);
-    expect(css).toMatch(/\.reader-screen\s*{[^}]*height:\s*100%/s);
+    expect(css).toMatch(/\.reader-screen\s*{[^}]*min-height:\s*100%/s);
     expect(css).toMatch(/\.reader-screen\s*{[^}]*padding:\s*var\(--space-3\) var\(--space-4\) calc\(var\(--reader-bottom-reserve\) \+ var\(--space-2\) \+ var\(--safe-area-bottom\)\)/s);
     expect(css).toMatch(/\.reader-header\s*{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/s);
     expect(css).toMatch(/\.reader-title-block\s*{[^}]*min-width:\s*0/s);
-    expect(css).toMatch(/\.chapter-viewport\s*{[^}]*overflow:\s*hidden/s);
-    expect(css).toMatch(/\.chapter\s*{[^}]*column-width:\s*var\(--reader-page-width\)/s);
-    expect(css).toMatch(/\.chapter\s*{[^}]*column-gap:\s*var\(--reader-page-gap\)/s);
+    expect(css).toMatch(/\.chapter\s*{[^}]*flex:\s*1 0 auto/s);
     expect(css).toMatch(/\.icon-button\s*{[^}]*width:\s*var\(--reader-action-height\)/s);
   });
 
