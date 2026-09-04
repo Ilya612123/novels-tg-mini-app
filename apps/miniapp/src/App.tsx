@@ -5,9 +5,13 @@ import { ApiError, api } from "./api/client";
 import type { Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
 import { LoadingState } from "./components/LoadingState";
+import { getCatalogCategoryBooks, type CatalogCategory } from "./screens/catalogCategories";
 import { openInvoice, openTelegramLink } from "./telegram";
 
 const BottomNav = lazy(() => import("./components/BottomNav").then((module) => ({ default: module.BottomNav })));
+const CatalogCategoryScreen = lazy(() =>
+  import("./screens/CatalogCategoryScreen").then((module) => ({ default: module.CatalogCategoryScreen }))
+);
 const CatalogScreen = lazy(() => import("./screens/CatalogScreen").then((module) => ({ default: module.CatalogScreen })));
 const NovelScreen = lazy(() => import("./screens/NovelScreen").then((module) => ({ default: module.NovelScreen })));
 const PaywallScreen = lazy(() => import("./screens/PaywallScreen").then((module) => ({ default: module.PaywallScreen })));
@@ -19,6 +23,7 @@ const PaywallWinbackModal = lazy(() =>
 
 type View =
   | { name: "catalog" }
+  | { name: "catalog-category"; category: CatalogCategory }
   | { name: "profile" }
   | { name: "novel"; bookId: string }
   | { name: "reader"; bookId: string; chapter: ChapterDto }
@@ -48,6 +53,7 @@ function pickSimilarBooks(books: BookSummary[], currentBookId: string): BookSumm
 }
 
 function getViewKey(view: View): string {
+  if (view.name === "catalog-category") return `catalog-category:${view.category}`;
   if (view.name === "novel") return `novel:${view.bookId}`;
   if (view.name === "reader") return `reader:${view.bookId}:${view.chapter.number}`;
   if (view.name === "paywall") return `paywall:${view.bookId ?? "profile"}:${view.chapterNumber ?? "subscription"}:${view.returnTo}`;
@@ -129,6 +135,10 @@ export function App() {
   }, [books, view]);
 
   const similarBooks = useMemo(() => (currentBook ? pickSimilarBooks(books, currentBook.id) : []), [books, currentBook]);
+  const categoryBooks = useMemo(
+    () => (view.name === "catalog-category" ? getCatalogCategoryBooks(books, view.category) : []),
+    [books, view]
+  );
 
   const markUserScrollIntent = useCallback((_event: WheelEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
     lastUserScrollIntentAtRef.current = Date.now();
@@ -266,7 +276,22 @@ export function App() {
         ref={pageScrollRootRef}
       >
         <Suspense fallback={<LoadingState />}>
-          {view.name === "catalog" && <CatalogScreen books={books} onOpenBook={openBook} onSearch={handleCatalogSearch} />}
+          {view.name === "catalog" && (
+            <CatalogScreen
+              books={books}
+              onOpenCategory={(category) => setView({ name: "catalog-category", category })}
+              onOpenBook={openBook}
+              onSearch={handleCatalogSearch}
+            />
+          )}
+          {view.name === "catalog-category" && (
+            <CatalogCategoryScreen
+              books={categoryBooks}
+              category={view.category}
+              onBack={() => setView({ name: "catalog" })}
+              onOpenBook={openBook}
+            />
+          )}
           {view.name === "profile" && (
             <ProfileScreen
               books={books}

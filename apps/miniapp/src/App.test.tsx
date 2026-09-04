@@ -1,6 +1,11 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+
+async function clickFirstBookCard(title: string) {
+  const cards = await screen.findAllByRole("button", { name: new RegExp(title) });
+  fireEvent.click(cards[0]);
+}
 
 describe("App", () => {
   beforeEach(() => {
@@ -28,6 +33,60 @@ describe("App", () => {
 
     await waitFor(() => expect(screen.getByText("Книги")).toBeTruthy());
     expect(screen.getByText("Профиль")).toBeTruthy();
+  });
+
+  it("opens catalog categories as separate app views", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "book-1",
+                  title: "Башня Бога",
+                  author: "SIU",
+                  description: "Фэнтези",
+                  coverUrl: null,
+                  chapterCount: 10,
+                  freeChapterLimit: 3,
+                  rating: { averageScore: 9.1, reviewCount: 100, distribution: [] },
+                  progress: null,
+                  tags: ["фэнтези"]
+                },
+                {
+                  id: "book-2",
+                  title: "Поднятие уровня в одиночку",
+                  author: "Chugong",
+                  description: "Экшен",
+                  coverUrl: null,
+                  chapterCount: 12,
+                  freeChapterLimit: 3,
+                  rating: { averageScore: 8.8, reviewCount: 120, distribution: [] },
+                  progress: null,
+                  tags: ["экшен"]
+                }
+              ]),
+              { status: 200 }
+            )
+          );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    const popularSection = await screen.findByRole("region", { name: "Популярное сейчас" });
+    fireEvent.click(within(popularSection).getByRole("button", { name: "Все" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Популярное сейчас" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Назад" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Назад" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Книги" })).toBeTruthy());
   });
 
   it("logs catalog loading start and rendered events", async () => {
@@ -306,7 +365,7 @@ describe("App", () => {
 
     render(<App />);
 
-    fireEvent.click(await screen.findByText("Тестовая новелла"));
+    await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Продолжить"));
 
     await waitFor(() => expect(screen.getByText("Подписка")).toBeTruthy());
@@ -380,7 +439,7 @@ describe("App", () => {
 
     render(<App />);
 
-    fireEvent.click(await screen.findByText("Тестовая новелла"));
+    await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Читать"));
     await screen.findByText("Глава 1");
     const readerScrollRoot = screen.getByTestId("page-scroll-root");
@@ -457,7 +516,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("navigation", { name: "Основная навигация" })).toBeTruthy();
-    fireEvent.click(await screen.findByText("Тестовая новелла"));
+    await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Читать"));
 
     await screen.findByText("Глава 1");
@@ -480,7 +539,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByText("Профиль"));
     fireEvent.click(await screen.findByText("Купить подписку"));
 
-    expect(screen.getByText("Подписка")).toBeTruthy();
+    expect(await screen.findByText("Подписка")).toBeTruthy();
     expect(screen.queryByText("Читайте продолжение без ограничений и открывайте платные главы сразу после оплаты.")).toBeNull();
     expect((screen.getByRole("radio", { name: /Месяц/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(screen.getByRole("radio", { name: /4 месяца/ }));

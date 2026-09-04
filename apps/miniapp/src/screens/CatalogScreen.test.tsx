@@ -56,7 +56,7 @@ describe("CatalogScreen", () => {
   afterEach(() => cleanup());
 
   it("shows the catalog home sections without a search query", () => {
-    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onSearch={vi.fn()} />);
+    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={vi.fn()} onSearch={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Продолжить чтение" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Популярное сейчас" })).toBeTruthy();
@@ -69,8 +69,17 @@ describe("CatalogScreen", () => {
     ]);
   });
 
+  it("requests opening all books from a catalog category", () => {
+    const onOpenCategory = vi.fn();
+    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={onOpenCategory} onSearch={vi.fn()} />);
+
+    fireEvent.click(within(screen.getByRole("region", { name: "Популярное сейчас" })).getByRole("button", { name: "Все" }));
+
+    expect(onOpenCategory).toHaveBeenCalledWith("popular");
+  });
+
   it("filters catalog books locally by the search query", () => {
-    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onSearch={vi.fn()} />);
+    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={vi.fn()} onSearch={vi.fn()} />);
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по книгам" }), { target: { value: "уров" } });
 
@@ -80,7 +89,7 @@ describe("CatalogScreen", () => {
   });
 
   it("shows an empty local result state without removing the search field", () => {
-    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onSearch={vi.fn()} />);
+    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={vi.fn()} onSearch={vi.fn()} />);
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по книгам" }), { target: { value: "нет такой книги" } });
 

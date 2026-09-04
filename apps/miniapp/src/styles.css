@@ -166,6 +166,23 @@ button {
   margin-bottom: var(--space-5);
 }
 
+.catalog-category-header {
+  justify-content: flex-start;
+  gap: var(--space-3);
+}
+
+.catalog-category-back-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+.catalog-category-back-button svg {
+  width: var(--catalog-search-icon-size);
+  height: var(--catalog-search-icon-size);
+}
+
 h1,
 h2,
 h3,
@@ -247,12 +264,38 @@ h2 {
   overflow: hidden;
 }
 
+.catalog-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
 .catalog-section h2 {
+  min-width: 0;
   margin-bottom: var(--space-3);
   color: var(--color-text-strong);
   font-size: var(--font-size-title-3);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-title-3);
+}
+
+.catalog-section-header h2 {
+  margin-bottom: 0;
+}
+
+.catalog-section-all-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+  padding: var(--space-2);
+}
+
+.catalog-section-all-button svg {
+  width: var(--catalog-search-icon-size);
+  height: var(--catalog-search-icon-size);
 }
 
 .catalog-book-rail {

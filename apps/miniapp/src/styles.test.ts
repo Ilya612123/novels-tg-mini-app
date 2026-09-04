@@ -58,6 +58,10 @@ describe("miniapp design system", () => {
   });
 
   it("keeps catalog rails horizontally scrollable inside the page", () => {
+    expect(css).toMatch(/\.catalog-category-header\s*{[^}]*justify-content:\s*flex-start/s);
+    expect(css).toMatch(/\.catalog-category-back-button\s*{[^}]*gap:\s*var\(--space-1\)/s);
+    expect(css).toMatch(/\.catalog-section-header\s*{[^}]*display:\s*flex/s);
+    expect(css).toMatch(/\.catalog-section-all-button\s*{[^}]*gap:\s*var\(--space-1\)/s);
     expect(css).toMatch(/\.catalog-section\s*{[^}]*overflow:\s*hidden/s);
     expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*display:\s*flex/s);
     expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*max-width:\s*100%/s);

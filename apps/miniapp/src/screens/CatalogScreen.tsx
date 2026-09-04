@@ -1,10 +1,15 @@
-import { Search } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { BookSummary } from "@novell-reader/shared";
 import { BookCard } from "../components/BookCard";
+import {
+  CATALOG_SECTION_BOOK_LIMIT,
+  getCatalogCategoryBooks,
+  getCatalogCategoryTitle,
+  type CatalogCategory
+} from "./catalogCategories";
 
 const SEARCH_ANALYTICS_DELAY_MS = 500;
-const CATALOG_SECTION_BOOK_LIMIT = 10;
 
 function normalizeSearchQuery(query: string): string {
   return query.trim().toLocaleLowerCase("ru-RU");
@@ -15,38 +20,31 @@ function matchesSearchQuery(book: BookSummary, query: string): boolean {
   return searchableText.includes(query);
 }
 
-function sortByProgressUpdatedAtDesc(books: BookSummary[]): BookSummary[] {
-  return [...books].sort((first, second) => {
-    const firstUpdatedAt = first.progress ? Date.parse(first.progress.updatedAt) : 0;
-    const secondUpdatedAt = second.progress ? Date.parse(second.progress.updatedAt) : 0;
-    return secondUpdatedAt - firstUpdatedAt;
-  });
-}
-
-function sortByPopularityDesc(books: BookSummary[]): BookSummary[] {
-  return [...books].sort((first, second) => {
-    const reviewCountDiff = second.rating.reviewCount - first.rating.reviewCount;
-    if (reviewCountDiff !== 0) return reviewCountDiff;
-    return second.rating.averageScore - first.rating.averageScore;
-  });
-}
-
 function CatalogSection({
   books,
+  category,
   id,
-  title,
+  onOpenAll,
   onOpenBook
 }: {
   books: BookSummary[];
+  category: CatalogCategory;
   id: string;
-  title: string;
+  onOpenAll: () => void;
   onOpenBook: (bookId: string) => void;
 }) {
   if (books.length === 0) return null;
+  const title = getCatalogCategoryTitle(category);
 
   return (
     <section className="catalog-section" aria-labelledby={id}>
-      <h2 id={id}>{title}</h2>
+      <div className="catalog-section-header">
+        <h2 id={id}>{title}</h2>
+        <button className="text-button catalog-section-all-button" onClick={onOpenAll} type="button">
+          <ArrowUpRight aria-hidden="true" />
+          Все
+        </button>
+      </div>
       <div className="catalog-book-rail">
         {books.map((book) => (
           <BookCard key={book.id} book={book} onOpen={onOpenBook} />
@@ -58,23 +56,21 @@ function CatalogSection({
 
 type CatalogScreenProps = {
   books: BookSummary[];
+  onOpenCategory: (category: CatalogCategory) => void;
   onOpenBook: (bookId: string) => void;
   onSearch?: (query: string, resultCount: number) => void;
 };
 
-export function CatalogScreen({ books, onOpenBook, onSearch }: CatalogScreenProps) {
+export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: CatalogScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedSearchQuery = normalizeSearchQuery(searchQuery);
   const filteredBooks = useMemo(() => {
     if (!normalizedSearchQuery) return books;
     return books.filter((book) => matchesSearchQuery(book, normalizedSearchQuery));
   }, [books, normalizedSearchQuery]);
-  const continueReadingBooks = useMemo(
-    () => sortByProgressUpdatedAtDesc(books.filter((book) => book.progress)).slice(0, CATALOG_SECTION_BOOK_LIMIT),
-    [books]
-  );
-  const popularBooks = useMemo(() => sortByPopularityDesc(books).slice(0, CATALOG_SECTION_BOOK_LIMIT), [books]);
-  const newBooks = useMemo(() => books.slice(0, CATALOG_SECTION_BOOK_LIMIT), [books]);
+  const continueReadingBooks = useMemo(() => getCatalogCategoryBooks(books, "continue-reading"), [books]);
+  const popularBooks = useMemo(() => getCatalogCategoryBooks(books, "popular"), [books]);
+  const newBooks = useMemo(() => getCatalogCategoryBooks(books, "new"), [books]);
 
   useEffect(() => {
     if (!normalizedSearchQuery || !onSearch) return;
@@ -118,13 +114,26 @@ export function CatalogScreen({ books, onOpenBook, onSearch }: CatalogScreenProp
       ) : (
         <div className="catalog-sections">
           <CatalogSection
+            category="continue-reading"
             id="catalog-section-continue-reading"
-            title="Продолжить чтение"
-            books={continueReadingBooks}
+            books={continueReadingBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("continue-reading")}
             onOpenBook={onOpenBook}
           />
-          <CatalogSection id="catalog-section-popular" title="Популярное сейчас" books={popularBooks} onOpenBook={onOpenBook} />
-          <CatalogSection id="catalog-section-new" title="Свежие новинки" books={newBooks} onOpenBook={onOpenBook} />
+          <CatalogSection
+            category="popular"
+            id="catalog-section-popular"
+            books={popularBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("popular")}
+            onOpenBook={onOpenBook}
+          />
+          <CatalogSection
+            category="new"
+            id="catalog-section-new"
+            books={newBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("new")}
+            onOpenBook={onOpenBook}
+          />
         </div>
       )}
     </main>
