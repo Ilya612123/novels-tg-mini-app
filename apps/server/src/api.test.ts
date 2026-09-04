@@ -39,7 +39,7 @@ beforeEach(async () => {
   await fs.mkdir(path.join(contentDir, "book-1", "chapters"), { recursive: true });
   await fs.mkdir(path.join(miniAppDistDir, "assets"), { recursive: true });
   await fs.writeFile(path.join(contentDir, "book-1", "chapters", "1.html"), "<p>Первая глава</p>");
-  await fs.writeFile(path.join(contentDir, "book-1", "chapters", "18.html"), "<p>Платная глава</p>");
+  await fs.writeFile(path.join(contentDir, "book-1", "chapters", "5.html"), "<p>Платная глава</p>");
   await fs.writeFile(path.join(miniAppDistDir, "index.html"), '<html><body><div id="root"></div></body></html>');
   await fs.writeFile(path.join(miniAppDistDir, "assets", "app.js"), "console.log('miniapp');");
   await testDb.db.book.create({
@@ -53,7 +53,7 @@ beforeEach(async () => {
         createMany: {
           data: [
             { id: "book-1-1", number: 1, title: "Глава 1", contentPath: "book-1/chapters/1.html" },
-            { id: "book-1-18", number: 18, title: "Глава 18", contentPath: "book-1/chapters/18.html" }
+            { id: "book-1-5", number: 5, title: "Глава 5", contentPath: "book-1/chapters/5.html" }
           ]
         }
       }
@@ -116,7 +116,7 @@ describe("createApiServer", () => {
   it("returns paywall for paid chapter without access", async () => {
     const app = createApiServer({ config, db: testDb.db });
     const res = await request(app)
-      .get("/api/books/book-1/chapters/18")
+      .get("/api/books/book-1/chapters/5")
       .set("x-dev-telegram-user-id", "5100586818")
       .expect(402);
 

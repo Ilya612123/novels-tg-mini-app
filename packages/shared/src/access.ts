@@ -6,12 +6,16 @@ export type AccessCheckInput = {
   now?: Date;
 };
 
+const DEFAULT_FREE_CHAPTER_LIMIT = 4;
+
 export function calculateFreeChapterLimit(totalChapters: number, manualLimit?: number | null): number {
+  const maxFreeChapters = Math.min(DEFAULT_FREE_CHAPTER_LIMIT, Math.max(1, totalChapters));
+
   if (manualLimit != null && manualLimit > 0) {
-    return Math.min(manualLimit, Math.max(1, totalChapters));
+    return Math.min(manualLimit, maxFreeChapters);
   }
 
-  return Math.max(1, Math.ceil(totalChapters / 3));
+  return maxFreeChapters;
 }
 
 export function canReadChapter(input: AccessCheckInput): boolean {

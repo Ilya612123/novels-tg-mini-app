@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { BookSummary, ChapterDto, ReadingProgressSummary } from "@novell-reader/shared";
+import { calculateFreeChapterLimit, type BookSummary, type ChapterDto, type ReadingProgressSummary } from "@novell-reader/shared";
 import type { ReadingProgress } from "@prisma/client";
 import * as cheerio from "cheerio";
 import type { DbClient } from "../db.js";
@@ -22,6 +22,10 @@ function progressSummary(progress: ReadingProgress | null): ReadingProgressSumma
 
 function coverUrl(coverPath: string | null): string | null {
   return coverPath ? `/content/imported/${coverPath.replaceAll("\\", "/")}` : null;
+}
+
+function effectiveFreeChapterLimit(book: { chapterCount: number; freeChapterLimit: number }): number {
+  return calculateFreeChapterLimit(book.chapterCount, book.freeChapterLimit);
 }
 
 function parseBookTags(tagsJson: string | null): string[] {
@@ -71,7 +75,7 @@ export async function listBooksForUser(db: DbClient, userId: string): Promise<Bo
     tags: parseBookTags(book.tagsJson),
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
-    freeChapterLimit: book.freeChapterLimit,
+    freeChapterLimit: effectiveFreeChapterLimit(book),
     rating: generateStaticBookRating(book.id),
     progress: progressSummary(progressByBook.get(book.id) ?? null)
   }));
@@ -89,7 +93,7 @@ export async function getBookDetailForUser(db: DbClient, userId: string, bookId:
     tags: parseBookTags(book.tagsJson),
     coverUrl: coverUrl(book.coverPath),
     chapterCount: book.chapterCount,
-    freeChapterLimit: book.freeChapterLimit,
+    freeChapterLimit: effectiveFreeChapterLimit(book),
     rating: generateStaticBookRating(book.id),
     progress: progressSummary(progress)
   };

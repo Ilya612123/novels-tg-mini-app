@@ -59,6 +59,14 @@ describe("book ratings", () => {
     expect(listedBook?.tags).toEqual(["романтика", "драма"]);
     expect(detailedBook?.tags).toEqual(["романтика", "драма"]);
   });
+
+  it("returns the effective four-chapter free limit for existing books", async () => {
+    const [listedBook] = await listBooksForUser(testDb.db, "5100586818");
+    const detailedBook = await getBookDetailForUser(testDb.db, "5100586818", "book-1");
+
+    expect(listedBook?.freeChapterLimit).toBe(4);
+    expect(detailedBook?.freeChapterLimit).toBe(4);
+  });
 });
 
 describe("chapters", () => {
