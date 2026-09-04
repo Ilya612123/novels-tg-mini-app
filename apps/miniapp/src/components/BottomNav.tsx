@@ -1,6 +1,6 @@
-import { BookOpen, UserRound } from "lucide-react";
+import { BookMarked, BookOpen, UserRound } from "lucide-react";
 
-export type Tab = "catalog" | "profile";
+export type Tab = "catalog" | "bookmarks" | "profile";
 
 export function BottomNav({ activeTab, onChange }: { activeTab: Tab; onChange: (tab: Tab) => void }) {
   return (
@@ -8,6 +8,10 @@ export function BottomNav({ activeTab, onChange }: { activeTab: Tab; onChange: (
       <button className={activeTab === "catalog" ? "active" : ""} onClick={() => onChange("catalog")} type="button">
         <BookOpen size={20} />
         <span>Книги</span>
+      </button>
+      <button className={activeTab === "bookmarks" ? "active" : ""} onClick={() => onChange("bookmarks")} type="button">
+        <BookMarked size={20} />
+        <span>Закладки</span>
       </button>
       <button className={activeTab === "profile" ? "active" : ""} onClick={() => onChange("profile")} type="button">
         <UserRound size={20} />

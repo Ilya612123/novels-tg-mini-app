@@ -32,6 +32,7 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByText("Книги")).toBeTruthy());
+    expect(screen.getByText("Закладки")).toBeTruthy();
     expect(screen.getByText("Профиль")).toBeTruthy();
   });
 
@@ -523,6 +524,74 @@ describe("App", () => {
     expect(screen.queryByRole("navigation", { name: "Основная навигация" })).toBeNull();
   });
 
+  it("opens saved reading progress from the bookmarks tab", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              {
+                id: "book-1",
+                title: "Тестовая новелла",
+                author: "Автор",
+                description: "Описание",
+                coverUrl: null,
+                chapterCount: 10,
+                freeChapterLimit: 3,
+                rating: {
+                  averageScore: 9.14,
+                  reviewCount: 2400,
+                  distribution: []
+                },
+                progress: {
+                  bookId: "book-1",
+                  chapterNumber: 4,
+                  percent: null,
+                  updatedAt: "2026-08-12T00:00:00.000Z"
+                }
+              }
+            ]),
+            { status: 200 }
+          )
+        );
+      }
+      if (url.endsWith("/api/books/book-1/chapters/4")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: "chapter-4",
+              bookId: "book-1",
+              number: 4,
+              title: "Глава 4",
+              html: "<p>Текст главы</p>",
+              canRead: true
+            }),
+            { status: 200 }
+          )
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Закладки"));
+    expect(await screen.findByRole("heading", { level: 1, name: "Закладки" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Тестовая новелла/ }));
+
+    expect(await screen.findByText("Глава 4")).toBeTruthy();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/analytics",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ label: "продолжил чтение из закладок", metadata: { bookTitle: "Тестовая новелла" } })
+        })
+      )
+    );
+  });
+
   it("opens the subscription paywall from the profile", async () => {
     vi.stubGlobal(
       "fetch",
@@ -663,7 +732,7 @@ describe("App", () => {
     expect(await screen.findByText("1 месяц со скидкой 75%")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
-    await waitFor(() => expect(screen.getByText("Здесь появятся книги, которые вы начали читать.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Статус доступа появится после подключения платежей.")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Купить подписку"));
     fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));

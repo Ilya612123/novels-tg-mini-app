@@ -9,6 +9,7 @@ import { getCatalogCategoryBooks, type CatalogCategory } from "./screens/catalog
 import { openInvoice, openTelegramLink } from "./telegram";
 
 const BottomNav = lazy(() => import("./components/BottomNav").then((module) => ({ default: module.BottomNav })));
+const BookmarksScreen = lazy(() => import("./screens/BookmarksScreen").then((module) => ({ default: module.BookmarksScreen })));
 const CatalogCategoryScreen = lazy(() =>
   import("./screens/CatalogCategoryScreen").then((module) => ({ default: module.CatalogCategoryScreen }))
 );
@@ -24,6 +25,7 @@ const PaywallWinbackModal = lazy(() =>
 type View =
   | { name: "catalog" }
   | { name: "catalog-category"; category: CatalogCategory }
+  | { name: "bookmarks" }
   | { name: "profile" }
   | { name: "novel"; bookId: string }
   | { name: "reader"; bookId: string; chapter: ChapterDto }
@@ -202,7 +204,12 @@ export function App() {
     }
   };
 
-  const activeTab: Tab = view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile") ? "profile" : "catalog";
+  const activeTab: Tab =
+    view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile")
+      ? "profile"
+      : view.name === "bookmarks"
+        ? "bookmarks"
+        : "catalog";
   const isTelegramAuthError = error?.status === 401;
 
   const leavePaywall = () => {
@@ -294,11 +301,6 @@ export function App() {
           )}
           {view.name === "profile" && (
             <ProfileScreen
-              books={books}
-              onContinue={(book) => {
-                api.analytics("продолжил чтение из профиля", { bookTitle: book.title }).catch(console.error);
-                void openChapter(book.id, book.progress?.chapterNumber ?? 1);
-              }}
               onOpenPaywall={() => {
                 api.analytics("открыл paywall из профиля").catch(console.error);
                 setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
@@ -306,6 +308,15 @@ export function App() {
               onOpenSupport={() => {
                 api.analytics("открыл поддержку из профиля").catch(console.error);
                 openTelegramLink(supportUrl);
+              }}
+            />
+          )}
+          {view.name === "bookmarks" && (
+            <BookmarksScreen
+              books={books}
+              onContinue={(book) => {
+                api.analytics("продолжил чтение из закладок", { bookTitle: book.title }).catch(console.error);
+                void openChapter(book.id, book.progress?.chapterNumber ?? 1);
               }}
             />
           )}
@@ -353,8 +364,11 @@ export function App() {
         <BottomNav
           activeTab={activeTab}
           onChange={(tab) => {
-            setView(tab === "profile" ? { name: "profile" } : { name: "catalog" });
+            if (tab === "profile") setView({ name: "profile" });
+            if (tab === "bookmarks") setView({ name: "bookmarks" });
+            if (tab === "catalog") setView({ name: "catalog" });
             if (tab === "profile") api.analytics("открыл Профиль").catch(console.error);
+            if (tab === "bookmarks") api.analytics("открыл Закладки").catch(console.error);
             if (tab === "catalog") api.analytics("открыл Каталог").catch(console.error);
           }}
         />
