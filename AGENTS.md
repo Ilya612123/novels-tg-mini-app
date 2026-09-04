@@ -1,5 +1,9 @@
 # Agent Instructions
 
+## Development Process
+
+- Do not use TDD for this project. Implement changes directly, then run the relevant tests and checks after the implementation is in place.
+
 ## Mini App Design System
 
 - Treat `apps/miniapp/src/styles.css` as the source of truth for UI design tokens.

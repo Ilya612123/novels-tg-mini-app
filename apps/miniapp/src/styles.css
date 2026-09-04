@@ -91,6 +91,7 @@
   --book-rating-badge-min-width: 28px;
   --book-rating-badge-padding: 2px var(--space-2);
   --catalog-search-icon-size: 20px;
+  --catalog-rail-card-width: 118px;
   --z-cover-badge: 1;
   --z-cover-overlay: 1;
   --z-paywall-buy-bar: 20;
@@ -154,6 +155,7 @@ button {
 .screen {
   width: min(720px, 100%);
   margin: 0 auto;
+  overflow-x: hidden;
   padding: var(--space-5) var(--space-4) calc(var(--nav-height) + var(--space-7) + var(--safe-area-bottom));
 }
 
@@ -232,6 +234,48 @@ h2 {
 
 .catalog-empty-search {
   margin-top: var(--space-6);
+}
+
+.catalog-sections {
+  display: grid;
+  gap: var(--space-7);
+  min-width: 0;
+}
+
+.catalog-section {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.catalog-section h2 {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-title-3);
+}
+
+.catalog-book-rail {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding: 0 0 var(--space-1);
+  scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+.catalog-book-rail .book-card {
+  flex: 0 0 var(--catalog-rail-card-width);
+}
+
+.catalog-book-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .book-card {

@@ -53,7 +53,18 @@ describe("miniapp design system", () => {
   });
 
   it("reserves bottom space inside screens for the fixed bottom navigation", () => {
+    expect(css).toMatch(/\.screen\s*{[^}]*overflow-x:\s*hidden/s);
     expect(css).toMatch(/\.screen\s*{[^}]*padding:\s*var\(--space-5\) var\(--space-4\) calc\(var\(--nav-height\) \+ var\(--space-7\) \+ var\(--safe-area-bottom\)\)/s);
+  });
+
+  it("keeps catalog rails horizontally scrollable inside the page", () => {
+    expect(css).toMatch(/\.catalog-section\s*{[^}]*overflow:\s*hidden/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*display:\s*flex/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*max-width:\s*100%/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*overflow-x:\s*auto/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*overflow-y:\s*hidden/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*touch-action:\s*pan-x/s);
+    expect(css).toMatch(/\.catalog-book-rail \.book-card\s*{[^}]*flex:\s*0 0 var\(--catalog-rail-card-width\)/s);
   });
 
   it("reserves bottom space on the paywall for the fixed buy button", () => {
