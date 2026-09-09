@@ -452,7 +452,7 @@ export function App() {
             <PaywallScreen
               plans={paywallPlans}
               paymentStatusMessage={paymentStatusMessage}
-              onBack={leavePaywall}
+              onBack={showNextWinbackOfferOrLeave}
               onBuy={(planId) => {
                 api
                   .analytics("нажал кнопку оплаты", { bookTitle: currentBook?.title, chapterNumber: view.chapterNumber, planId })

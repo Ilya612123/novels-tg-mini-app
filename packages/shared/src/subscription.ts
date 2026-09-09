@@ -79,21 +79,6 @@ export const subscriptionPlans = [
     invoiceDescription: "Откройте продолжение всех новелл на 30 дней со скидкой 50%.",
     invoiceLabel: "30 дней доступа со скидкой 50%",
     paywallVisible: false
-  },
-  {
-    id: "month-75-off",
-    title: "Месяц -75%",
-    priceLabel: "75₽",
-    starsAmount: rublesToTelegramStars(75),
-    durationDays: 30,
-    period: "1 месяц",
-    oldPrice: "299₽",
-    discount: "Скидка 75%",
-    badge: null,
-    invoiceTitle: "Доступ к новеллам на 30 дней со скидкой 75%",
-    invoiceDescription: "Откройте продолжение всех новелл на 30 дней со скидкой 75%.",
-    invoiceLabel: "30 дней доступа со скидкой 75%",
-    paywallVisible: false
   }
 ] as const;
 
@@ -118,14 +103,6 @@ export const paywallDiscountWinbackOffers = [
     body: "Откройте все платные главы на 30 дней по специальной цене.",
     buttonLabel: "Купить за 149₽",
     planId: "month-50-off"
-  },
-  {
-    id: "month-75-off",
-    kind: "discount",
-    title: "1 месяц со скидкой 75%",
-    body: "Последнее предложение: 30 дней доступа с максимальной скидкой.",
-    buttonLabel: "Купить за 75₽",
-    planId: "month-75-off"
   }
 ] as const;
 

@@ -211,11 +211,9 @@ describe("createApiServer", () => {
     const app = createApiServer({ config, db: testDb.db });
     const first = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
     const second = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
-    const third = await request(app).post("/api/paywall/winback-offers/next").set("x-dev-telegram-user-id", "5100586818").expect(200);
 
     expect(first.body.offer).toMatchObject({ id: "month-50-off", kind: "discount", planId: "month-50-off" });
-    expect(second.body.offer).toMatchObject({ id: "month-75-off", kind: "discount", planId: "month-75-off" });
-    expect(third.body.offer).toBeNull();
+    expect(second.body.offer).toBeNull();
   });
 
   it("includes already issued discount offers in paywall plans", async () => {

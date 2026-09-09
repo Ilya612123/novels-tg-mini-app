@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findSubscriptionPlan, RUB_PER_TELEGRAM_STAR } from "./subscription.js";
+import { findSubscriptionPlan, paywallDiscountWinbackOffers, RUB_PER_TELEGRAM_STAR } from "./subscription.js";
 
 describe("subscription pricing", () => {
   it("converts ruble subscription prices to Telegram Stars", () => {
@@ -12,6 +12,6 @@ describe("subscription pricing", () => {
 
   it("keeps winback prices in rubles and invoices their converted Stars amounts", () => {
     expect(findSubscriptionPlan("month-50-off")).toMatchObject({ priceLabel: "149₽", oldPrice: "299₽", starsAmount: 83 });
-    expect(findSubscriptionPlan("month-75-off")).toMatchObject({ priceLabel: "75₽", oldPrice: "299₽", starsAmount: 42 });
+    expect(paywallDiscountWinbackOffers.map((offer) => offer.planId)).toEqual(["month-50-off"]);
   });
 });

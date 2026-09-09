@@ -678,6 +678,34 @@ describe("App", () => {
     );
   });
 
+  it("offers a 50% discount when leaving the paywall without paying", async () => {
+    const winbackResponses = [
+      { offer: { id: "month-50-off", kind: "discount", title: "1 месяц со скидкой 50%", body: "Продолжите читать дешевле.", buttonLabel: "Купить за 149₽", planId: "month-50-off" } },
+      { offer: null }
+    ];
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      if (url.endsWith("/api/paywall/winback-offers/next")) {
+        return Promise.resolve(new Response(JSON.stringify(winbackResponses.shift()), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(await screen.findByText("Купить подписку"));
+    fireEvent.click(await screen.findByRole("button", { name: "Назад" }));
+
+    expect(await screen.findByText("1 месяц со скидкой 50%")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
+    await waitFor(() => expect(screen.getByText("Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.")).toBeTruthy());
+  });
+
   it("shows paywall winback popups after closing the Telegram invoice", async () => {
     const openTelegramLink = vi.fn();
     const invoiceCallbacks: Array<(status: string) => void> = [];
@@ -686,7 +714,6 @@ describe("App", () => {
     });
     const winbackResponses = [
       { offer: { id: "month-50-off", kind: "discount", title: "1 месяц со скидкой 50%", body: "Продолжите читать дешевле.", buttonLabel: "Купить за 149₽", planId: "month-50-off" } },
-      { offer: { id: "month-75-off", kind: "discount", title: "1 месяц со скидкой 75%", body: "Последнее предложение.", buttonLabel: "Купить за 75₽", planId: "month-75-off" } },
       { offer: null }
     ];
     const fetchMock = vi.fn((url: string) => {
@@ -730,9 +757,6 @@ describe("App", () => {
       )
     );
     expect(openInvoice).toHaveBeenLastCalledWith("https://t.me/invoice", expect.any(Function));
-
-    fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
-    expect(await screen.findByText("1 месяц со скидкой 75%")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
     await waitFor(() => expect(screen.getByText("Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.")).toBeTruthy());
