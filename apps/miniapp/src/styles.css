@@ -216,7 +216,7 @@ h2 {
 
 .catalog-search {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   min-height: var(--control-height-md);
   margin-bottom: var(--space-4);
@@ -227,7 +227,7 @@ h2 {
   background: var(--color-surface-control);
 }
 
-.catalog-search svg {
+.catalog-search > svg {
   width: var(--catalog-search-icon-size);
   height: var(--catalog-search-icon-size);
   margin-right: var(--space-2);
@@ -248,8 +248,28 @@ h2 {
   color: var(--tg-color-muted);
 }
 
-.catalog-empty-search {
-  margin-top: var(--space-6);
+.catalog-search-clear {
+  display: grid;
+  place-items: center;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  margin-right: calc(var(--space-2) * -1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  color: var(--tg-color-muted);
+  background: transparent;
+}
+
+.catalog-search-clear svg {
+  width: var(--catalog-search-icon-size);
+  height: var(--catalog-search-icon-size);
+}
+
+.catalog-empty-results {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .catalog-sections {
@@ -308,7 +328,7 @@ h2 {
   overscroll-behavior-x: contain;
   padding: 0 0 var(--space-1);
   scrollbar-width: none;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1027,6 +1047,12 @@ h2 {
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
   text-align: center;
+}
+
+.state.catalog-empty-search {
+  min-height: auto;
+  margin-top: 0;
+  padding: var(--space-2) var(--space-3);
 }
 
 .state-error {

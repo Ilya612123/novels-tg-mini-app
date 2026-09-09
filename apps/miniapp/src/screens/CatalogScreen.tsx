@@ -1,5 +1,5 @@
-import { ArrowUpRight, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight, Search, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BookSummary } from "@novell-reader/shared";
 import { BookCard } from "../components/BookCard";
 import {
@@ -63,6 +63,7 @@ type CatalogScreenProps = {
 
 export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: CatalogScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const normalizedSearchQuery = normalizeSearchQuery(searchQuery);
   const filteredBooks = useMemo(() => {
     if (!normalizedSearchQuery) return books;
@@ -99,9 +100,23 @@ export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: C
           inputMode="search"
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
           placeholder="Поиск"
+          ref={searchInputRef}
           type="search"
           value={searchQuery}
         />
+        {searchQuery ? (
+          <button
+            aria-label="Очистить поиск"
+            className="catalog-search-clear"
+            onClick={() => {
+              setSearchQuery("");
+              searchInputRef.current?.focus();
+            }}
+            type="button"
+          >
+            <X aria-hidden="true" />
+          </button>
+        ) : null}
       </label>
       {normalizedSearchQuery && filteredBooks.length > 0 ? (
         <section className="book-grid">
@@ -110,7 +125,16 @@ export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: C
           ))}
         </section>
       ) : normalizedSearchQuery ? (
-        <div className="state catalog-empty-search">Ничего не найдено</div>
+        <div className="catalog-empty-results">
+          <div className="state catalog-empty-search">Ничего не найдено</div>
+          <CatalogSection
+            category="popular"
+            id="catalog-section-popular"
+            books={popularBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("popular")}
+            onOpenBook={onOpenBook}
+          />
+        </div>
       ) : (
         <div className="catalog-sections">
           <CatalogSection

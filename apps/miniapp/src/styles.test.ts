@@ -39,8 +39,17 @@ describe("miniapp design system", () => {
     expect(css).toContain("--gradient-cover-title-overlay: linear-gradient");
     expect(css).toContain("--catalog-search-icon-size: 20px");
     expect(css).toMatch(/\.catalog-search\s*{[^}]*min-height:\s*var\(--control-height-md\)/s);
+    expect(css).toMatch(/\.catalog-search\s*{[^}]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto/s);
     expect(css).toMatch(/\.catalog-search\s*{[^}]*padding:\s*0 var\(--space-3\)/s);
     expect(css).toMatch(/\.catalog-search input\s*{[^}]*height:\s*var\(--control-height-sm\)/s);
+    expect(css).toMatch(/\.catalog-search-clear\s*{[^}]*width:\s*var\(--control-height-sm\)/s);
+    expect(css).toMatch(/\.catalog-search-clear\s*{[^}]*height:\s*var\(--control-height-sm\)/s);
+    expect(css).toMatch(/\.catalog-search-clear svg\s*{[^}]*width:\s*var\(--catalog-search-icon-size\)/s);
+    expect(css).toMatch(/\.state\.catalog-empty-search\s*{[^}]*min-height:\s*auto/s);
+    expect(css).toMatch(/\.state\.catalog-empty-search\s*{[^}]*margin-top:\s*0/s);
+    expect(css).toMatch(/\.state\.catalog-empty-search\s*{[^}]*padding:\s*var\(--space-2\) var\(--space-3\)/s);
+    expect(css.indexOf(".state.catalog-empty-search")).toBeGreaterThan(css.indexOf(".state {"));
+    expect(css).toMatch(/\.catalog-empty-results\s*{[^}]*gap:\s*var\(--space-3\)/s);
     expect(css).toMatch(/\.book-grid\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
     expect(css).toMatch(/\.book-card\s*{[^}]*display:\s*block/s);
     expect(css).toMatch(/\.book-card-text\s*{[^}]*position:\s*absolute/s);
@@ -67,7 +76,7 @@ describe("miniapp design system", () => {
     expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*max-width:\s*100%/s);
     expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*overflow-x:\s*auto/s);
     expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*overflow-y:\s*hidden/s);
-    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*touch-action:\s*pan-x/s);
+    expect(css).toMatch(/\.catalog-book-rail\s*{[^}]*touch-action:\s*pan-x pan-y/s);
     expect(css).toMatch(/\.catalog-book-rail \.book-card\s*{[^}]*flex:\s*0 0 var\(--catalog-rail-card-width\)/s);
   });
 

@@ -81,11 +81,26 @@ describe("CatalogScreen", () => {
   it("filters catalog books locally by the search query", () => {
     render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={vi.fn()} onSearch={vi.fn()} />);
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по книгам" }), { target: { value: "уров" } });
+    const searchInput = screen.getByRole("searchbox", { name: "Поиск по книгам" });
+    expect(screen.queryByRole("button", { name: "Очистить поиск" })).toBeNull();
+
+    fireEvent.change(searchInput, { target: { value: "уров" } });
 
     expect(screen.getByText("Поднятие уровня в одиночку")).toBeTruthy();
     expect(screen.queryByText("Башня Бога")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Популярное сейчас" })).toBeNull();
+  });
+
+  it("clears the catalog search from the input button", () => {
+    render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={vi.fn()} onSearch={vi.fn()} />);
+
+    const searchInput = screen.getByRole("searchbox", { name: "Поиск по книгам" });
+    fireEvent.change(searchInput, { target: { value: "уров" } });
+    fireEvent.click(screen.getByRole("button", { name: "Очистить поиск" }));
+
+    expect((searchInput as HTMLInputElement).value).toBe("");
+    expect(screen.queryByRole("button", { name: "Очистить поиск" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Популярное сейчас" })).toBeTruthy();
   });
 
   it("shows an empty local result state without removing the search field", () => {
@@ -95,5 +110,11 @@ describe("CatalogScreen", () => {
 
     expect(screen.getByText("Ничего не найдено")).toBeTruthy();
     expect(screen.getByRole("searchbox", { name: "Поиск по книгам" })).toBeTruthy();
+    const popularSection = screen.getByRole("region", { name: "Популярное сейчас" });
+    expect(within(popularSection).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "Поднятие уровня в одиночку",
+      "Башня Бога",
+      "Новый роман"
+    ]);
   });
 });
