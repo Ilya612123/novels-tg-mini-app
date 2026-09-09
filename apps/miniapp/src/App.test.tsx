@@ -606,6 +606,11 @@ describe("App", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByText("Профиль"));
+    expect(await screen.findByText("Подписка открывает продолжение без ограничений.")).toBeTruthy();
+    expect(screen.getByText("Все платные главы во всех новеллах")).toBeTruthy();
+    expect(screen.getByText("Доступ на 30 дней сразу после оплаты")).toBeTruthy();
+    expect(screen.getByText("Чтение без ожидания новых бесплатных глав")).toBeTruthy();
+
     fireEvent.click(await screen.findByText("Купить подписку"));
 
     expect(await screen.findByText("Подписка")).toBeTruthy();
@@ -703,7 +708,7 @@ describe("App", () => {
     expect(await screen.findByText("1 месяц со скидкой 50%")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
-    await waitFor(() => expect(screen.getByText("Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Подписка открывает продолжение без ограничений.")).toBeTruthy());
   });
 
   it("shows paywall winback popups after closing the Telegram invoice", async () => {
@@ -759,7 +764,7 @@ describe("App", () => {
     expect(openInvoice).toHaveBeenLastCalledWith("https://t.me/invoice", expect.any(Function));
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
-    await waitFor(() => expect(screen.getByText("Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Подписка открывает продолжение без ограничений.")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Купить подписку"));
     fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));

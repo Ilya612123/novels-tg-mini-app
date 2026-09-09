@@ -26,7 +26,14 @@ export function ProfileScreen({
         {accessStatus?.active && subscriptionDate ? (
           <p className="profile-access-status">Подписка активна до {subscriptionDate}</p>
         ) : (
-          <p className="muted">Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.</p>
+          <div className="profile-subscription-benefits">
+            <p>Подписка открывает продолжение без ограничений.</p>
+            <ul>
+              <li>Все платные главы во всех новеллах</li>
+              <li>Доступ на 30 дней сразу после оплаты</li>
+              <li>Чтение без ожидания новых бесплатных глав</li>
+            </ul>
+          </div>
         )}
         {!accessStatus?.active && (
           <button className="primary-button profile-subscription-button" onClick={onOpenPaywall} type="button">
