@@ -5,6 +5,7 @@ import { createBot } from "./bot.js";
 import { rotateTelegramAdsSnapshotRawPayloads } from "./repositories/telegramAds.js";
 import { matchPendingTelegramAdsAttributions } from "./services/adsAttribution.js";
 import { flushAnalyticsToTelegram } from "./services/analytics.js";
+import { startPushNotificationWorker } from "./services/pushNotifications.js";
 import { buildTelegramAdsRequestHeaders, collectTelegramAdsSnapshot } from "./telegramAds/collector.js";
 
 const TELEGRAM_ADS_RAW_PAYLOAD_ROTATION_INTERVAL_MS = 60 * 60 * 1000;
@@ -23,6 +24,12 @@ if (config.BOT_MODE === "polling") {
 } else {
   console.log("Bot polling disabled; webhook mode is active");
 }
+
+startPushNotificationWorker({
+  db: prisma,
+  bot,
+  miniAppUrl: config.MINI_APP_URL
+});
 
 setInterval(() => {
   flushAnalyticsToTelegram({

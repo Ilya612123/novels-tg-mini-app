@@ -442,7 +442,7 @@ describe("App", () => {
 
     await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Читать"));
-    await screen.findByText("Глава 1");
+    await screen.findByRole("heading", { level: 1, name: "Глава 1" });
     const readerScrollRoot = screen.getByTestId("page-scroll-root");
     readerScrollRoot.scrollTop = 420;
     scrollTo.mockClear();
@@ -520,7 +520,7 @@ describe("App", () => {
     await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Читать"));
 
-    await screen.findByText("Глава 1");
+    await screen.findByRole("heading", { level: 1, name: "Глава 1" });
     expect(screen.queryByRole("navigation", { name: "Основная навигация" })).toBeNull();
   });
 

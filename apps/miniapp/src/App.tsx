@@ -36,6 +36,13 @@ type AppError = {
   message: string;
 };
 
+type PushDeepLinkTarget = {
+  bookId: string | null;
+  chapterNumber: number | null;
+  pushId: string | null;
+  scenario: string | null;
+};
+
 const supportUrl = "https://t.me/esimsmile_support";
 const MINI_APP_ACTIVITY_LOG_INTERVAL_MS = 10_000;
 const USER_SCROLL_INTENT_WINDOW_MS = 1_000;
@@ -66,6 +73,33 @@ function normalizedScrollTop(scrollTop: number): number {
   return Math.max(0, Math.round(scrollTop));
 }
 
+function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTarget | null {
+  const params = new URLSearchParams(search);
+  const pushId = params.get("push");
+  const scenario = params.get("scenario");
+  const bookId = params.get("bookId");
+  const chapterRaw = params.get("chapter");
+  if (!pushId && !scenario && (!bookId || !chapterRaw)) return null;
+  if (!bookId || !chapterRaw) {
+    return {
+      bookId: null,
+      chapterNumber: null,
+      pushId,
+      scenario
+    };
+  }
+
+  const chapterNumber = Number(chapterRaw);
+  if (!Number.isInteger(chapterNumber) || chapterNumber < 1) return null;
+
+  return {
+    bookId,
+    chapterNumber,
+    pushId,
+    scenario
+  };
+}
+
 export function App() {
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [view, setView] = useState<View>({ name: "catalog" });
@@ -77,6 +111,7 @@ export function App() {
   const lastUserScrollIntentAtRef = useRef(0);
   const catalogScrollBatchRef = useRef<{ startScrollTop: number; endScrollTop: number } | null>(null);
   const catalogScrollTimeoutRef = useRef<number | null>(null);
+  const pushDeepLinkConsumedRef = useRef(false);
   const viewKey = getViewKey(view);
 
   useEffect(() => {
@@ -203,6 +238,25 @@ export function App() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pushDeepLinkConsumedRef.current || loading || error) return;
+    const target = getPushDeepLinkTarget();
+    if (!target) return;
+
+    pushDeepLinkConsumedRef.current = true;
+    api
+      .analytics("push_deep_link_opened", {
+        pushId: target.pushId,
+        scenario: target.scenario,
+        bookId: target.bookId,
+        chapterNumber: target.chapterNumber
+      })
+      .catch(console.error);
+    if (target.bookId && target.chapterNumber) {
+      void openChapter(target.bookId, target.chapterNumber);
+    }
+  }, [books, error, loading]);
 
   const activeTab: Tab =
     view.name === "profile" || (view.name === "paywall" && view.returnTo === "profile")

@@ -61,6 +61,9 @@ describe("CatalogScreen", () => {
     expect(screen.getByRole("heading", { name: "Продолжить чтение" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Популярное сейчас" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Свежие новинки" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Лучшие за неделю" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Сейчас читают" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Вычитано Клубом Читателей" })).toBeTruthy();
 
     const continueSection = screen.getByRole("region", { name: "Продолжить чтение" });
     expect(within(continueSection).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
@@ -74,8 +77,10 @@ describe("CatalogScreen", () => {
     render(<CatalogScreen books={books} onOpenBook={vi.fn()} onOpenCategory={onOpenCategory} onSearch={vi.fn()} />);
 
     fireEvent.click(within(screen.getByRole("region", { name: "Популярное сейчас" })).getByRole("button", { name: "Все" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Сейчас читают" })).getByRole("button", { name: "Все" }));
 
     expect(onOpenCategory).toHaveBeenCalledWith("popular");
+    expect(onOpenCategory).toHaveBeenCalledWith("reading-now");
   });
 
   it("filters catalog books locally by the search query", () => {

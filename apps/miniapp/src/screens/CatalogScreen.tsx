@@ -72,6 +72,9 @@ export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: C
   const continueReadingBooks = useMemo(() => getCatalogCategoryBooks(books, "continue-reading"), [books]);
   const popularBooks = useMemo(() => getCatalogCategoryBooks(books, "popular"), [books]);
   const newBooks = useMemo(() => getCatalogCategoryBooks(books, "new"), [books]);
+  const weeklyBestBooks = useMemo(() => getCatalogCategoryBooks(books, "weekly-best"), [books]);
+  const readingNowBooks = useMemo(() => getCatalogCategoryBooks(books, "reading-now"), [books]);
+  const clubProofreadBooks = useMemo(() => getCatalogCategoryBooks(books, "club-proofread"), [books]);
 
   useEffect(() => {
     if (!normalizedSearchQuery || !onSearch) return;
@@ -156,6 +159,27 @@ export function CatalogScreen({ books, onOpenCategory, onOpenBook, onSearch }: C
             id="catalog-section-new"
             books={newBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
             onOpenAll={() => onOpenCategory("new")}
+            onOpenBook={onOpenBook}
+          />
+          <CatalogSection
+            category="weekly-best"
+            id="catalog-section-weekly-best"
+            books={weeklyBestBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("weekly-best")}
+            onOpenBook={onOpenBook}
+          />
+          <CatalogSection
+            category="reading-now"
+            id="catalog-section-reading-now"
+            books={readingNowBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("reading-now")}
+            onOpenBook={onOpenBook}
+          />
+          <CatalogSection
+            category="club-proofread"
+            id="catalog-section-club-proofread"
+            books={clubProofreadBooks.slice(0, CATALOG_SECTION_BOOK_LIMIT)}
+            onOpenAll={() => onOpenCategory("club-proofread")}
             onOpenBook={onOpenBook}
           />
         </div>
