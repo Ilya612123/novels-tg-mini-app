@@ -83,6 +83,11 @@
   --nav-height: 84px;
   --reader-action-height: var(--control-height-sm);
   --reader-bottom-reserve: 0px;
+  --reader-skeleton-title-width: 112px;
+  --reader-skeleton-line-height: 18px;
+  --reader-skeleton-line-radius: var(--radius-sm);
+  --reader-skeleton-line-gap: var(--space-3);
+  --reader-skeleton-color: var(--tg-color-surface);
   --paywall-buy-bar-reserve: calc(var(--control-height-lg) + var(--space-6) + var(--safe-area-bottom));
   --app-viewport-height: 100dvh;
   --book-title-lines: 3;
@@ -695,6 +700,13 @@ h2 {
   white-space: nowrap;
 }
 
+.reader-title-skeleton {
+  width: var(--reader-skeleton-title-width);
+  height: var(--line-height-callout);
+  border-radius: var(--reader-skeleton-line-radius);
+  background: var(--reader-skeleton-color);
+}
+
 .chapter {
   width: 100%;
   flex: 1 0 auto;
@@ -705,6 +717,30 @@ h2 {
 
 .chapter p {
   margin-bottom: var(--space-3);
+}
+
+.reader-chapter-skeleton {
+  display: grid;
+  align-content: start;
+  gap: var(--reader-skeleton-line-gap);
+}
+
+.reader-chapter-skeleton span {
+  display: block;
+  width: 100%;
+  height: var(--reader-skeleton-line-height);
+  border-radius: var(--reader-skeleton-line-radius);
+  background: var(--reader-skeleton-color);
+}
+
+.reader-chapter-skeleton span:nth-child(2),
+.reader-chapter-skeleton span:nth-child(5) {
+  width: 92%;
+}
+
+.reader-chapter-skeleton span:nth-child(3),
+.reader-chapter-skeleton span:nth-child(7) {
+  width: 76%;
 }
 
 .reader-actions {

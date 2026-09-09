@@ -35,7 +35,7 @@ type View =
   | { name: "bookmarks" }
   | { name: "profile" }
   | { name: "novel"; bookId: string }
-  | { name: "reader"; bookId: string; chapter: ChapterDto }
+  | { name: "reader"; bookId: string; chapterNumber: number; chapter: ChapterDto | null }
   | { name: "paywall"; bookId: string | null; chapterNumber: number | null; returnTo: "novel" | "profile" };
 
 type AppError = {
@@ -72,7 +72,7 @@ function pickSimilarBooks(books: BookSummary[], currentBookId: string): BookSumm
 function getViewKey(view: View): string {
   if (view.name === "catalog-category") return `catalog-category:${view.category}`;
   if (view.name === "novel") return `novel:${view.bookId}`;
-  if (view.name === "reader") return `reader:${view.bookId}:${view.chapter.number}`;
+  if (view.name === "reader") return `reader:${view.bookId}:${view.chapterNumber}`;
   if (view.name === "paywall") return `paywall:${view.bookId ?? "profile"}:${view.chapterNumber ?? "subscription"}:${view.returnTo}`;
   return view.name;
 }
@@ -127,6 +127,7 @@ export function App() {
   const catalogScrollBatchRef = useRef<{ startScrollTop: number; endScrollTop: number } | null>(null);
   const catalogScrollTimeoutRef = useRef<number | null>(null);
   const pushDeepLinkConsumedRef = useRef(false);
+  const chapterRequestIdRef = useRef(0);
   const viewKey = getViewKey(view);
 
   useEffect(() => {
@@ -237,21 +238,23 @@ export function App() {
   };
 
   const openChapter = async (bookId: string, chapterNumber: number) => {
-    setLoading(true);
+    const requestId = chapterRequestIdRef.current + 1;
+    chapterRequestIdRef.current = requestId;
     setError(null);
+    setView({ name: "reader", bookId, chapterNumber, chapter: null });
     const book = books.find((item) => item.id === bookId);
     try {
       const chapter = await api.chapter(bookId, chapterNumber);
+      if (chapterRequestIdRef.current !== requestId) return;
       if (!chapter.canRead) {
         api.analytics("уперся в paywall", { bookTitle: book?.title, chapterNumber }).catch(console.error);
         setView({ name: "paywall", bookId, chapterNumber, returnTo: "novel" });
         return;
       }
-      setView({ name: "reader", bookId, chapter });
+      setView({ name: "reader", bookId, chapterNumber: chapter.number, chapter });
     } catch (err) {
+      if (chapterRequestIdRef.current !== requestId) return;
       setError(toAppError(err, "Не удалось открыть главу"));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -442,6 +445,7 @@ export function App() {
           {view.name === "reader" && currentBook && (
             <ReaderScreen
               chapter={view.chapter}
+              chapterNumber={view.chapterNumber}
               bookTitle={currentBook.title}
               scrollRootRef={pageScrollRootRef}
               onBack={() => setView({ name: "novel", bookId: currentBook.id })}

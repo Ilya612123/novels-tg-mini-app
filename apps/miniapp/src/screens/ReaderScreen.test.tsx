@@ -29,7 +29,7 @@ describe("ReaderScreen", () => {
     const scrollRootRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
       </div>
     );
 
@@ -51,7 +51,7 @@ describe("ReaderScreen", () => {
     const scrollRootRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
       </div>
     );
 
@@ -65,7 +65,7 @@ describe("ReaderScreen", () => {
     const scrollRootRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
       </div>
     );
 
@@ -86,7 +86,7 @@ describe("ReaderScreen", () => {
     const scrollRootRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
       </div>
     );
 
@@ -103,7 +103,7 @@ describe("ReaderScreen", () => {
     const scrollRootRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
       </div>
     );
 

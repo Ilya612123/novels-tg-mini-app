@@ -376,6 +376,72 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Купить подписку · 299₽" })).toBeTruthy();
   });
 
+  it("opens the reader skeleton immediately while continuing to a chapter", async () => {
+    let resolveChapter: (response: Response) => void = () => {};
+    const chapterResponse = new Promise<Response>((resolve) => {
+      resolveChapter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                {
+                  id: "book-1",
+                  title: "Тестовая новелла",
+                  author: "Автор",
+                  description: "Описание",
+                  coverUrl: null,
+                  chapterCount: 10,
+                  freeChapterLimit: 3,
+                  rating: { averageScore: 9.14, reviewCount: 2400, distribution: [] },
+                  progress: {
+                    bookId: "book-1",
+                    chapterNumber: 4,
+                    percent: null,
+                    updatedAt: "2026-08-12T00:00:00.000Z"
+                  }
+                }
+              ]),
+              { status: 200 }
+            )
+          );
+        }
+        if (url.endsWith("/api/books/book-1/chapters/4")) return chapterResponse;
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    await clickFirstBookCard("Тестовая новелла");
+    fireEvent.click(await screen.findByText("Продолжить"));
+
+    expect(await screen.findByRole("button", { name: "Назад" })).toBeTruthy();
+    expect(screen.getByTestId("reader-chapter-skeleton")).toBeTruthy();
+    expect(screen.queryByText("Описание")).toBeNull();
+
+    await act(async () => {
+      resolveChapter(
+        new Response(
+          JSON.stringify({
+            id: "chapter-4",
+            bookId: "book-1",
+            number: 4,
+            title: "Глава 4",
+            html: "<p>Текст главы</p>",
+            canRead: true
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    expect((await screen.findByTestId("chapter-content")).textContent).toBe("Текст главы");
+  });
+
   it("opens each page in a fresh scroll container without calling window scroll APIs", async () => {
     const scrollTo = vi.mocked(window.scrollTo);
     vi.stubGlobal(
