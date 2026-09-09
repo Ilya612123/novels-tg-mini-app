@@ -96,6 +96,42 @@ describe("flushAnalyticsToTelegram", () => {
     expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(0);
   });
 
+  it("splits analytics digests by Telegram message length", async () => {
+    const occurredAt = new Date("2026-08-11T09:21:03.000Z");
+    for (let index = 0; index < 30; index += 1) {
+      await recordAnalyticsEvent(testDb.db, {
+        userId: "5100586818",
+        username: "barboruss",
+        source: "bot",
+        label: "push_scheduled",
+        metadata: {
+          scenario: "opened_app_no_read",
+          templateId: "opened_app_no_read_v1",
+          messageText: "Подобрали несколько историй на вечер. Начать с первой главы?",
+          scheduledAt: "2026-08-11T09:21:03.000Z",
+          progressUpdatedAt: "2026-08-11T08:21:03.000Z",
+          deepLink: `https://reader.example.test/?push=${index}&payload=${"x".repeat(90)}`
+        },
+        occurredAt: new Date(occurredAt.getTime() + index * 1000)
+      });
+    }
+
+    const sendMessage = vi.fn().mockResolvedValue({});
+    const result = await flushAnalyticsToTelegram({
+      db: testDb.db,
+      bot: { api: { sendMessage } } as unknown as Bot,
+      chatId: "-1001",
+      now: new Date("2026-08-11T09:30:00.000Z")
+    });
+
+    expect(result).toEqual({ sent: true, eventCount: 30 });
+    expect(sendMessage.mock.calls.length).toBeGreaterThan(1);
+    for (const [, text] of sendMessage.mock.calls) {
+      expect(text.length).toBeLessThanOrEqual(4096);
+    }
+    expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(0);
+  });
+
   it("includes Telegram Ads attribution in bot start digest lines", async () => {
     const starts = await Promise.all([
       recordBotStartEvent(testDb.db, {

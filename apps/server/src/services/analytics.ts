@@ -6,6 +6,8 @@ import { listUnflushedAnalyticsEvents, markAnalyticsEventsFlushed, recordAnalyti
 import { findAttributionForStartEvent } from "../repositories/userAttributions.js";
 
 const ANALYTICS_EVENTS_PER_MESSAGE = 50;
+const TELEGRAM_MESSAGE_LIMIT = 4096;
+const TRUNCATED_MESSAGE_SUFFIX = "\n...[truncated]";
 
 export type AnalyticsInput = {
   userId: string;
@@ -85,11 +87,30 @@ async function formatAnalyticsEvents(db: DbClient, events: AnalyticsEvent[], now
   });
 }
 
-function splitAnalyticsEvents(events: AnalyticsEvent[], now: Date): AnalyticsEvent[][] {
+function fitTelegramMessage(text: string): string {
+  if (text.length <= TELEGRAM_MESSAGE_LIMIT) return text;
+  return `${text.slice(0, TELEGRAM_MESSAGE_LIMIT - TRUNCATED_MESSAGE_SUFFIX.length)}${TRUNCATED_MESSAGE_SUFFIX}`;
+}
+
+async function splitAnalyticsEvents(db: DbClient, events: AnalyticsEvent[], now: Date): Promise<AnalyticsEvent[][]> {
   const batches: AnalyticsEvent[][] = [];
-  for (let index = 0; index < events.length; index += ANALYTICS_EVENTS_PER_MESSAGE) {
-    batches.push(events.slice(index, index + ANALYTICS_EVENTS_PER_MESSAGE));
+  let currentBatch: AnalyticsEvent[] = [];
+
+  for (const event of events) {
+    const nextBatch = [...currentBatch, event];
+    const nextText = await formatAnalyticsEvents(db, nextBatch, now);
+    if (
+      currentBatch.length > 0 &&
+      (nextBatch.length > ANALYTICS_EVENTS_PER_MESSAGE || (nextText?.length ?? 0) > TELEGRAM_MESSAGE_LIMIT)
+    ) {
+      batches.push(currentBatch);
+      currentBatch = [event];
+    } else {
+      currentBatch = nextBatch;
+    }
   }
+
+  if (currentBatch.length > 0) batches.push(currentBatch);
   return batches;
 }
 
@@ -111,11 +132,11 @@ export async function flushAnalyticsToTelegram(input: {
   if (events.length === 0) return { sent: false, eventCount: 0 };
 
   let sentCount = 0;
-  for (const batch of splitAnalyticsEvents(events, now)) {
+  for (const batch of await splitAnalyticsEvents(input.db, events, now)) {
     const text = await formatAnalyticsEvents(input.db, batch, now);
     if (!text) continue;
 
-    await input.bot.api.sendMessage(input.chatId, text);
+    await input.bot.api.sendMessage(input.chatId, fitTelegramMessage(text));
     await markAnalyticsEventsFlushed(
       input.db,
       batch.map((event) => event.id),
