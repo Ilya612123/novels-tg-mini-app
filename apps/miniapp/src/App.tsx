@@ -1,6 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TouchEvent, UIEvent, WheelEvent } from "react";
-import { publicSubscriptionPlans, type BookSummary, type ChapterDto, type PaywallWinbackOffer, type SubscriptionPlan } from "@novell-reader/shared";
+import {
+  publicSubscriptionPlans,
+  type AccessStatusDto,
+  type BookSummary,
+  type ChapterDto,
+  type PaywallWinbackOffer,
+  type SubscriptionPlan
+} from "@novell-reader/shared";
 import { ApiError, api } from "./api/client";
 import type { Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
@@ -43,10 +50,11 @@ type PushDeepLinkTarget = {
   scenario: string | null;
 };
 
-const supportUrl = "https://t.me/esimsmile_support";
 const MINI_APP_ACTIVITY_LOG_INTERVAL_MS = 10_000;
 const USER_SCROLL_INTENT_WINDOW_MS = 1_000;
 const CATALOG_SCROLL_BATCH_DELAY_MS = 500;
+const ACCESS_CONFIRMATION_ATTEMPTS = 6;
+const ACCESS_CONFIRMATION_DELAY_MS = 1_000;
 
 function toAppError(err: unknown, fallbackMessage: string): AppError {
   if (err instanceof ApiError) return { status: err.status, message: err.message };
@@ -71,6 +79,10 @@ function getViewKey(view: View): string {
 
 function normalizedScrollTop(scrollTop: number): number {
   return Math.max(0, Math.round(scrollTop));
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTarget | null {
@@ -107,6 +119,9 @@ export function App() {
   const [error, setError] = useState<AppError | null>(null);
   const [winbackOffer, setWinbackOffer] = useState<PaywallWinbackOffer | null>(null);
   const [paywallPlans, setPaywallPlans] = useState<SubscriptionPlan[]>([...publicSubscriptionPlans]);
+  const [supportUrl, setSupportUrl] = useState<string | null>(null);
+  const [accessStatus, setAccessStatus] = useState<AccessStatusDto | null>(null);
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const pageScrollRootRef = useRef<HTMLDivElement>(null);
   const lastUserScrollIntentAtRef = useRef(0);
   const catalogScrollBatchRef = useRef<{ startScrollTop: number; endScrollTop: number } | null>(null);
@@ -117,10 +132,11 @@ export function App() {
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
     api.analytics("загрузка Каталога началась").catch(console.error);
-    api
-      .books()
-      .then((items) => {
+    Promise.all([api.books(), api.config(), api.accessStatus()])
+      .then(([items, config, access]) => {
         setBooks(items);
+        setSupportUrl(config.supportUrl);
+        setAccessStatus(access);
         api.analytics("открыл Каталог").catch(console.error);
       })
       .catch((err: unknown) => setError(toAppError(err, "Не удалось загрузить книги")))
@@ -294,10 +310,46 @@ export function App() {
   };
 
   const showNextWinbackOfferAfterInvoice = (status: string) => {
-    if (status === "paid") return;
+    if (status === "paid") {
+      api.analytics("invoice_paid_callback").catch(console.error);
+      setWinbackOffer(null);
+      setPaymentStatusMessage("Оплата прошла. Активируем подписку...");
+      void confirmPaidAccess();
+      return;
+    }
     import("@novell-reader/shared")
       .then((module) => setWinbackOffer(module.starsHelpWinbackOffer))
       .catch((err) => setError(toAppError(err, "Не удалось показать предложение")));
+  };
+
+  const confirmPaidAccess = async () => {
+    for (let attempt = 1; attempt <= ACCESS_CONFIRMATION_ATTEMPTS; attempt += 1) {
+      try {
+        const access = await api.accessStatus();
+        setAccessStatus(access);
+        if (access.active) {
+          setPaymentStatusMessage("Подписка активна.");
+          api.analytics("subscription_activation_confirmed").catch(console.error);
+          api.books().then(setBooks).catch(console.error);
+          if (view.name === "paywall" && view.bookId && view.chapterNumber) {
+            void openChapter(view.bookId, view.chapterNumber);
+          } else {
+            setView({ name: "profile" });
+          }
+          return;
+        }
+      } catch (err) {
+        if (attempt === ACCESS_CONFIRMATION_ATTEMPTS) {
+          setError(toAppError(err, "Не удалось проверить статус подписки"));
+          return;
+        }
+      }
+      await wait(ACCESS_CONFIRMATION_DELAY_MS);
+    }
+
+    setPaymentStatusMessage("Оплата получена. Если подписка не появится через несколько секунд, откройте профиль заново или напишите в поддержку.");
+    api.analytics("subscription_activation_timeout").catch(console.error);
+    setView({ name: "profile" });
   };
 
   const handleWinbackAction = () => {
@@ -355,11 +407,15 @@ export function App() {
           )}
           {view.name === "profile" && (
             <ProfileScreen
+              accessStatus={accessStatus}
+              paymentStatusMessage={paymentStatusMessage}
               onOpenPaywall={() => {
                 api.analytics("открыл paywall из профиля").catch(console.error);
+                setPaymentStatusMessage(null);
                 setView({ name: "paywall", bookId: null, chapterNumber: null, returnTo: "profile" });
               }}
               onOpenSupport={() => {
+                if (!supportUrl) return;
                 api.analytics("открыл поддержку из профиля").catch(console.error);
                 openTelegramLink(supportUrl);
               }}
@@ -395,6 +451,7 @@ export function App() {
           {view.name === "paywall" && (
             <PaywallScreen
               plans={paywallPlans}
+              paymentStatusMessage={paymentStatusMessage}
               onBack={leavePaywall}
               onBuy={(planId) => {
                 api

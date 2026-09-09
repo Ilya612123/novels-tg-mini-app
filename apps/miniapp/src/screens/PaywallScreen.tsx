@@ -3,10 +3,12 @@ import { Check, Crown } from "lucide-react";
 import { type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
 
 export function PaywallScreen({
+  paymentStatusMessage,
   onBack,
   onBuy,
   plans
 }: {
+  paymentStatusMessage?: string | null;
   onBack: () => void;
   onBuy: (planId: SubscriptionPlanId) => void;
   plans: SubscriptionPlan[];
@@ -27,6 +29,8 @@ export function PaywallScreen({
         </button>
         <h1>Подписка</h1>
       </header>
+
+      {paymentStatusMessage && <p className="paywall-payment-status">{paymentStatusMessage}</p>}
 
       <section className="subscription-plans" role="radiogroup" aria-label="Тарифы подписки">
         {plans.map((plan) => (

@@ -11,7 +11,9 @@ import { HttpError } from "./httpErrors.js";
 import { listBooksForUser, getBookDetailForUser, getChapterForUser } from "./services/books.js";
 import { saveProgress } from "./services/progress.js";
 import { createAnalyticsEvent } from "./services/analytics.js";
+import { toAccessStatus } from "./services/access.js";
 import { createAccessInvoiceLink } from "./services/payments.js";
+import { getActiveAccess } from "./repositories/access.js";
 import { listPaywallPlansForUser, reserveNextPaywallWinbackOffer } from "./repositories/paywallWinback.js";
 
 export type ApiDeps = {
@@ -97,6 +99,10 @@ export function createApiServer(deps: ApiDeps) {
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
+  app.get("/api/config", (_req, res) => {
+    res.json({ supportUrl: deps.config.SUPPORT_URL });
+  });
+
   if (deps.bot && deps.config.BOT_MODE === "webhook") {
     app.post("/telegram/webhook", webhookCallback(deps.bot, "express"));
   }
@@ -120,6 +126,15 @@ export function createApiServer(deps: ApiDeps) {
       }
       await setDevTelegramWebhook(deps.bot, webhookUrl, deps.devWebhookRetryDelayMs ?? 5000);
       res.json({ ok: true, miniAppUrl: deps.config.MINI_APP_URL, webhookUrl });
+    })
+  );
+
+  app.get(
+    "/api/access",
+    asyncRoute(async (req, res) => {
+      const user = await requireTelegramUser(deps.db, req, deps.config.BOT_TOKEN);
+      const access = await getActiveAccess(deps.db, user.id);
+      res.json(toAccessStatus(access));
     })
   );
 

@@ -1,4 +1,11 @@
-import type { BookSummary, ChapterDto, PaywallWinbackOffer, SubscriptionPlan, SubscriptionPlanId } from "@novell-reader/shared";
+import type {
+  AccessStatusDto,
+  BookSummary,
+  ChapterDto,
+  PaywallWinbackOffer,
+  SubscriptionPlan,
+  SubscriptionPlanId
+} from "@novell-reader/shared";
 import { getTelegramInitData } from "../telegram";
 
 export class ApiError extends Error {
@@ -35,8 +42,11 @@ export type LockedChapter = { canRead: false; reason: "paywall" };
 export type PaymentResponse = { invoiceLink: string; providerPayload: string };
 export type PaywallWinbackOfferResponse = { offer: PaywallWinbackOffer | null };
 export type PaywallPlansResponse = { plans: SubscriptionPlan[] };
+export type AppConfigResponse = { supportUrl: string };
 
 export const api = {
+  config: () => request<AppConfigResponse>("/api/config"),
+  accessStatus: () => request<AccessStatusDto>("/api/access"),
   books: () => request<BookSummary[]>("/api/books"),
   book: (bookId: string) => request<BookSummary>(`/api/books/${bookId}`),
   chapter: (bookId: string, chapterNumber: number) =>

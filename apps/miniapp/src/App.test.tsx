@@ -627,6 +627,9 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
+        if (url.endsWith("/api/config")) {
+          return Promise.resolve(new Response(JSON.stringify({ supportUrl: "https://t.me/custom_support" }), { status: 200 }));
+        }
         if (url.endsWith("/api/books")) {
           return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
         }
@@ -637,11 +640,11 @@ describe("App", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByText("Профиль"));
-    const supportButton = screen.getByRole("button", { name: "Поддержка" });
+    const supportButton = await screen.findByRole("button", { name: "Поддержка" });
     expect(supportButton.className).toContain("profile-support-button");
     fireEvent.click(supportButton);
 
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/esimsmile_support");
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/custom_support");
   });
 
   it("creates payment for the selected subscription plan", async () => {
@@ -732,13 +735,58 @@ describe("App", () => {
     expect(await screen.findByText("1 месяц со скидкой 75%")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Закрыть предложение" }));
-    await waitFor(() => expect(screen.getByText("Статус доступа появится после подключения платежей.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Подписки нет. Оформите доступ, чтобы читать платные главы без ограничений.")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Купить подписку"));
     fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
     await waitFor(() => expect(openInvoice).toHaveBeenCalledTimes(3));
     invoiceCallbacks[2]?.("cancelled");
     expect(await screen.findByText("Не хватает Stars?")).toBeTruthy();
+  });
+
+  it("confirms paid invoices and shows active subscription in profile", async () => {
+    const invoiceCallbacks: Array<(status: string) => void> = [];
+    const openInvoice = vi.fn((_url: string, callback?: (status: string) => void) => {
+      if (callback) invoiceCallbacks.push(callback);
+    });
+    let accessChecks = 0;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/books")) {
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+      }
+      if (url.endsWith("/api/access")) {
+        accessChecks += 1;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify(
+              accessChecks === 1
+                ? { active: false, subscriptionUntil: null }
+                : { active: true, subscriptionUntil: "2026-10-10T09:00:00.000Z" }
+            ),
+            { status: 200 }
+          )
+        );
+      }
+      if (url.endsWith("/api/payments/create")) {
+        return Promise.resolve(new Response(JSON.stringify({ invoiceLink: "https://t.me/invoice", providerPayload: "payload" }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("Telegram", { WebApp: { openInvoice } });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(await screen.findByText("Купить подписку"));
+    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+
+    await waitFor(() => expect(openInvoice).toHaveBeenCalledWith("https://t.me/invoice", expect.any(Function)));
+    invoiceCallbacks[0]?.("paid");
+
+    expect(await screen.findByText("Оплата прошла. Активируем подписку...")).toBeTruthy();
+    expect(await screen.findByText(/Подписка активна до 10 октября 2026/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Купить подписку" })).toBeNull();
   });
 
   it("shows an issued discount offer when the paywall is opened again", async () => {

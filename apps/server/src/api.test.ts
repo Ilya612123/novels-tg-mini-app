@@ -75,6 +75,14 @@ describe("createApiServer", () => {
     expect(res.body[0].title).toBe("Компенсация за первую любовь");
   });
 
+  it("returns public Mini App config from environment config", async () => {
+    const app = createApiServer({ config: { ...config, SUPPORT_URL: "https://t.me/custom_support" }, db: testDb.db });
+
+    const res = await request(app).get("/api/config").expect(200);
+
+    expect(res.body).toEqual({ supportUrl: "https://t.me/custom_support" });
+  });
+
   it("serves imported cover files from the configured content root", async () => {
     await fs.writeFile(path.join(contentDir, "book-1", "cover.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
     const app = createApiServer({ config, db: testDb.db, contentRoot: contentDir });
@@ -121,6 +129,24 @@ describe("createApiServer", () => {
       .expect(402);
 
     expect(res.body).toEqual({ canRead: false, reason: "paywall" });
+  });
+
+  it("returns current access status for the Telegram user", async () => {
+    const app = createApiServer({ config, db: testDb.db });
+    await testDb.db.telegramUser.create({ data: { id: "5100586818" } });
+    await testDb.db.userAccess.create({
+      data: {
+        userId: "5100586818",
+        subscriptionUntil: new Date("2026-10-10T09:00:00.000Z")
+      }
+    });
+
+    const res = await request(app).get("/api/access").set("x-dev-telegram-user-id", "5100586818").expect(200);
+
+    expect(res.body).toEqual({
+      active: true,
+      subscriptionUntil: "2026-10-10T09:00:00.000Z"
+    });
   });
 
   it("creates a Telegram Stars invoice for the selected subscription plan", async () => {
