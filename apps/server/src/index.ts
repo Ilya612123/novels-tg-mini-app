@@ -2,9 +2,12 @@ import { loadConfig } from "./config.js";
 import { prisma } from "./db.js";
 import { createApiServer } from "./api.js";
 import { createBot } from "./bot.js";
+import { rotateTelegramAdsSnapshotRawPayloads } from "./repositories/telegramAds.js";
 import { matchPendingTelegramAdsAttributions } from "./services/adsAttribution.js";
 import { flushAnalyticsToTelegram } from "./services/analytics.js";
 import { buildTelegramAdsRequestHeaders, collectTelegramAdsSnapshot } from "./telegramAds/collector.js";
+
+const TELEGRAM_ADS_RAW_PAYLOAD_ROTATION_INTERVAL_MS = 60 * 60 * 1000;
 
 const config = loadConfig();
 const bot = createBot({ config, db: prisma });
@@ -33,7 +36,23 @@ setInterval(() => {
 
 let isCollecting = false;
 let isMatching = false;
+let isRotatingTelegramAdsRawPayloads = false;
 let telegramAdsCookieAlertSent = false;
+
+function rotateTelegramAdsRawPayloads() {
+  if (isRotatingTelegramAdsRawPayloads) return;
+  isRotatingTelegramAdsRawPayloads = true;
+  rotateTelegramAdsSnapshotRawPayloads(prisma)
+    .then((result) => {
+      console.log(`Telegram Ads rawPayload rotation cleaned ${result.cleanedSnapshots} snapshots`);
+    })
+    .catch((error) => {
+      console.error("Telegram Ads rawPayload rotation failed", error);
+    })
+    .finally(() => {
+      isRotatingTelegramAdsRawPayloads = false;
+    });
+}
 
 setInterval(() => {
   if (isCollecting) return;
@@ -86,3 +105,6 @@ setInterval(() => {
       isMatching = false;
     });
 }, config.TELEGRAM_ADS_MATCH_INTERVAL_MS);
+
+rotateTelegramAdsRawPayloads();
+setInterval(rotateTelegramAdsRawPayloads, TELEGRAM_ADS_RAW_PAYLOAD_ROTATION_INTERVAL_MS);

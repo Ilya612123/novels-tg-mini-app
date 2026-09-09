@@ -13,6 +13,11 @@ function parseNumber(value: unknown, field: string): number {
   return parsed;
 }
 
+function parseNullableCounter(value: unknown, field: string): number {
+  if (value == null || value === "") return 0;
+  return parseNumber(value, field);
+}
+
 function requireText(value: unknown, field: string): string {
   if (value == null || String(value).trim() === "") throw new Error(`Telegram Ads metric is missing ${field}`);
   return String(value).trim();
@@ -24,7 +29,7 @@ function normalizeRecord(record: RawMetricRecord): NormalizedTelegramAdMetric {
     adTitle: requireText(record.adTitle ?? record.title ?? record.name, "adTitle"),
     views: parseNumber(record.views, "views"),
     clicks: parseNumber(record.clicks, "clicks"),
-    actions: parseNumber(record.actions, "actions"),
+    actions: parseNullableCounter(record.actions, "actions"),
     spent: parseNumber(record.spent, "spent")
   };
 }

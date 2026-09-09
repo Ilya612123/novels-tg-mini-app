@@ -45,6 +45,20 @@ describe("Telegram Ads parser", () => {
     ]);
   });
 
+  it("treats null Telegram Ads actions as zero", () => {
+    const metrics = parseTelegramAdsMetrics({
+      items: [
+        { ad_id: 32, title: "фэндом", views: 0, clicks: 0, actions: null, spent: 0 },
+        { ad_id: 29, title: "романы", views: 100, clicks: 3, actions: 1, spent: 0.05 }
+      ]
+    });
+
+    expect(metrics).toEqual([
+      { adKey: "32", adTitle: "фэндом", views: 0, clicks: 0, actions: 0, spent: 0 },
+      { adKey: "29", adTitle: "романы", views: 100, clicks: 3, actions: 1, spent: 0.05 }
+    ]);
+  });
+
   it("throws a clear error when a required field is missing", () => {
     expect(() => parseTelegramAdsMetrics({ ads: [{ id: "romance", title: "романтика", views: 10 }] })).toThrow(
       "Telegram Ads metric is missing clicks"

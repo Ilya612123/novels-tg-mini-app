@@ -1,6 +1,8 @@
 import type { TelegramAdsSnapshot } from "@prisma/client";
 import type { DbClient } from "../db.js";
 
+const TELEGRAM_ADS_RAW_PAYLOAD_RETENTION_MS = 24 * 60 * 60 * 1000;
+
 export type NormalizedTelegramAdMetric = {
   adKey: string;
   adTitle: string;
@@ -92,4 +94,23 @@ export async function recordTelegramAdsCollectionFailure(
       rawPayload: serializeRawPayload(input.rawPayload)
     }
   });
+}
+
+export async function rotateTelegramAdsSnapshotRawPayloads(
+  db: DbClient,
+  now = new Date()
+): Promise<{ cleanedSnapshots: number }> {
+  const cutoff = new Date(now.getTime() - TELEGRAM_ADS_RAW_PAYLOAD_RETENTION_MS);
+  const result = await db.telegramAdsSnapshot.updateMany({
+    where: {
+      status: "success",
+      collectedAt: { lt: cutoff },
+      rawPayload: { not: null }
+    },
+    data: {
+      rawPayload: null
+    }
+  });
+
+  return { cleanedSnapshots: result.count };
 }

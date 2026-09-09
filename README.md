@@ -40,6 +40,8 @@ Telegram Ads attribution запускается вместе с backend. Нас�
 Collector MVP ходит на `https://ads.telegram.org/account` и использует auth из `TELEGRAM_ADS_COOKIE` или `TELEGRAM_ADS_REQUEST_HEADERS_JSON`. Он читает `initialAdsList.items` из HTML кабинета. Если URL или сессия недоступны, collector сохраняет failed snapshot и не останавливает backend.
 При похожей на истекшую cookie ошибке backend один раз за failure streak отправляет уведомление в `ANALYTICS_USER_ID`.
 
+Telegram Ads snapshots не удаляются: они нужны для связей с `TelegramAdMetric` и аналитики. Тяжелое поле `TelegramAdsSnapshot.rawPayload` хранится только для свежего debug. Backend при старте и далее раз в час зануляет `rawPayload` у successful snapshots старше 24 часов. Failed snapshots сохраняют `rawPayload` для диагностики.
+
 Проверка:
 
 ```bash
