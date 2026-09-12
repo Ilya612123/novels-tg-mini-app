@@ -48,6 +48,7 @@ type PushDeepLinkTarget = {
   chapterNumber: number | null;
   pushId: string | null;
   scenario: string | null;
+  random: boolean;
 };
 
 const MINI_APP_ACTIVITY_LOG_INTERVAL_MS = 10_000;
@@ -89,15 +90,17 @@ function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTar
   const params = new URLSearchParams(search);
   const pushId = params.get("push");
   const scenario = params.get("scenario");
+  const random = params.get("random") === "1";
   const bookId = params.get("bookId");
   const chapterRaw = params.get("chapter");
-  if (!pushId && !scenario && (!bookId || !chapterRaw)) return null;
+  if (!pushId && !scenario && !random && (!bookId || !chapterRaw)) return null;
   if (!bookId || !chapterRaw) {
     return {
       bookId: null,
       chapterNumber: null,
       pushId,
-      scenario
+      scenario,
+      random
     };
   }
 
@@ -108,7 +111,8 @@ function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTar
     bookId,
     chapterNumber,
     pushId,
-    scenario
+    scenario,
+    random
   };
 }
 
@@ -264,6 +268,15 @@ export function App() {
     if (!target) return;
 
     pushDeepLinkConsumedRef.current = true;
+    if (target.random) {
+      const randomBook = books[Math.floor(Math.random() * books.length)];
+      if (randomBook) {
+        api.analytics("открыл случайную книгу", { bookId: randomBook.id, bookTitle: randomBook.title }).catch(console.error);
+        openBook(randomBook.id);
+      }
+      return;
+    }
+
     api
       .analytics("push_deep_link_opened", {
         pushId: target.pushId,

@@ -1,4 +1,6 @@
-import { Bot, InlineKeyboard } from "grammy";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db.js";
 import { extendAccessByDays } from "./repositories/access.js";
@@ -11,6 +13,20 @@ export type BotDeps = {
   config: AppConfig;
   db: DbClient;
 };
+
+const START_MESSAGE_TEXT = `Привет. Тут истории про запретные чувства, одержимость, ревность и любовь, от которой сложно оторваться.
+
+Начни с первой главы — если не зацепит, просто выберешь другую.`;
+
+const START_PHOTO_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "content", "bot", "start.jpg");
+
+function withMiniAppParams(baseUrl: string, params: Record<string, string>): string {
+  const url = new URL(baseUrl);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
 
 export function createBot(deps: BotDeps): Bot {
   const bot = new Bot(deps.config.BOT_TOKEN);
@@ -39,10 +55,16 @@ export function createBot(deps: BotDeps): Bot {
     });
 
     const keyboard = new InlineKeyboard()
-      .webApp("Книги", deps.config.MINI_APP_URL)
+      .webApp("📚 Открыть каталог", deps.config.MINI_APP_URL)
+      .row()
+      .webApp("Случайная книга", withMiniAppParams(deps.config.MINI_APP_URL, { random: "1" }))
+      .row()
       .url("Поддержка", deps.config.SUPPORT_URL);
 
-    await ctx.reply("Откройте каталог новелл или напишите в поддержку.", { reply_markup: keyboard });
+    await ctx.replyWithPhoto(new InputFile(START_PHOTO_PATH), {
+      caption: START_MESSAGE_TEXT,
+      reply_markup: keyboard
+    });
   });
 
   bot.on("pre_checkout_query", async (ctx) => {
