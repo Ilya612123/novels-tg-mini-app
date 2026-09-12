@@ -4,6 +4,14 @@
 
 - Do not use TDD for this project. Implement changes directly, then run the relevant tests and checks after the implementation is in place.
 
+## Local Analytics Database
+
+- The local copy of the production SQLite database for analytics lives at `local-db-dumps/prod.db`.
+- This file is intentionally gitignored. Do not add database dumps, `local-db-dumps/`, `.prod-db-sync.env`, or `.prod-db-sync-known-hosts` to git.
+- Refresh the local production copy with `pnpm prod-db:sync`.
+- Run the local sync/status server with `pnpm prod-db:server`; it starts an initial sync on launch and serves status at `http://127.0.0.1:4321`.
+- A macOS LaunchAgent runs the sync daily at 04:00. Reinstall it with `pnpm prod-db:install-daily` if needed.
+
 ## Mini App Design System
 
 - Treat `apps/miniapp/src/styles.css` as the source of truth for UI design tokens.
