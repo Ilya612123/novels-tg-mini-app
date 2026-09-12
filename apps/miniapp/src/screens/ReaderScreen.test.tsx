@@ -92,7 +92,7 @@ describe("ReaderScreen", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
-    expect(onNavigate).toHaveBeenCalledWith(2);
+    expect(onNavigate).toHaveBeenCalledWith(2, "next");
   });
 
   it("logs chapter navigation analytics with the readable book title", () => {
@@ -113,7 +113,63 @@ describe("ReaderScreen", () => {
       "/api/analytics",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ label: "перешел на следующую главу", metadata: { bookTitle: "Башня Бога", chapterNumber: 1 } })
+        body: JSON.stringify({ label: "начал читать Главу 1", metadata: { bookTitle: "Башня Бога" } })
+      })
+    );
+  });
+
+  it("logs reading progress every 10 percent while scrolling", () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const scrollRootRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={scrollRootRef}>
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
+      </div>
+    );
+
+    Object.defineProperty(scrollRootRef.current, "scrollHeight", { configurable: true, value: 1000 });
+    Object.defineProperty(scrollRootRef.current, "clientHeight", { configurable: true, value: 100 });
+    scrollRootRef.current!.scrollTop = 190;
+    fireEvent.scroll(scrollRootRef.current!);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "читает главу 1", metadata: { bookTitle: "Башня Бога", chapterNumber: 1, percent: 10 } })
+      })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "читает главу 1", metadata: { bookTitle: "Башня Бога", chapterNumber: 1, percent: 20 } })
+      })
+    );
+  });
+
+  it("logs when leaving the reader with the back button", () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const onBack = vi.fn();
+
+    const scrollRootRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={scrollRootRef}>
+        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={onBack} onNavigate={vi.fn()} />
+      </div>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Назад" }));
+
+    expect(onBack).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/analytics",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ label: "вышел из чтения главы", metadata: { bookTitle: "Башня Бога", chapterNumber: 1 } })
       })
     );
   });

@@ -247,17 +247,43 @@ export function App() {
     setError(null);
     setView({ name: "reader", bookId, chapterNumber, chapter: null });
     const book = books.find((item) => item.id === bookId);
+    const loadStartedAt = performance.now();
     try {
       const chapter = await api.chapter(bookId, chapterNumber);
       if (chapterRequestIdRef.current !== requestId) return;
+      const durationMs = Math.round(performance.now() - loadStartedAt);
       if (!chapter.canRead) {
+        api.analytics("загрузка главы завершилась", { bookTitle: book?.title, chapterNumber, durationMs, status: "locked" }).catch(console.error);
         api.analytics("уперся в paywall", { bookTitle: book?.title, chapterNumber }).catch(console.error);
         setView({ name: "paywall", bookId, chapterNumber, returnTo: "novel" });
         return;
       }
+      api
+        .analytics("открыл главу", {
+          bookTitle: book?.title,
+          chapterNumber: chapter.number,
+          chapterTitle: chapter.title
+        })
+        .catch(console.error);
+      api
+        .analytics("загрузка главы завершилась", {
+          bookTitle: book?.title,
+          chapterNumber: chapter.number,
+          durationMs,
+          status: "success"
+        })
+        .catch(console.error);
       setView({ name: "reader", bookId, chapterNumber: chapter.number, chapter });
     } catch (err) {
       if (chapterRequestIdRef.current !== requestId) return;
+      api
+        .analytics("загрузка главы завершилась", {
+          bookTitle: book?.title,
+          chapterNumber,
+          durationMs: Math.round(performance.now() - loadStartedAt),
+          status: "error"
+        })
+        .catch(console.error);
       setError(toAppError(err, "Не удалось открыть главу"));
     }
   };
@@ -462,7 +488,15 @@ export function App() {
               bookTitle={currentBook.title}
               scrollRootRef={pageScrollRootRef}
               onBack={() => setView({ name: "novel", bookId: currentBook.id })}
-              onNavigate={(chapterNumber) => void openChapter(currentBook.id, chapterNumber)}
+              onNavigate={(chapterNumber, direction) => {
+                api
+                  .analytics(direction === "next" ? "нажал вперед" : "нажал назад", {
+                    fromChapterNumber: view.chapterNumber,
+                    toChapterNumber: chapterNumber
+                  })
+                  .catch(console.error);
+                void openChapter(currentBook.id, chapterNumber);
+              }}
             />
           )}
           {view.name === "paywall" && (

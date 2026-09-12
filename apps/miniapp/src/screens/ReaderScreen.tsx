@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ChapterDto } from "@novell-reader/shared";
-import { useEffect, useMemo, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { api } from "../api/client";
 
 export function ReaderScreen({
@@ -16,8 +16,9 @@ export function ReaderScreen({
   bookTitle: string;
   scrollRootRef: RefObject<HTMLElement | null>;
   onBack: () => void;
-  onNavigate: (chapterNumber: number) => void;
+  onNavigate: (chapterNumber: number, direction: "previous" | "next") => void;
 }) {
+  const reportedReadingPercentsRef = useRef<Set<number>>(new Set());
   const progressPayload = useMemo(
     () => (chapter ? { bookId: chapter.bookId, chapterNumber: chapter.number, position: 0, percent: null } : null),
     [chapter]
@@ -26,6 +27,7 @@ export function ReaderScreen({
   useEffect(() => {
     const scrollRoot = scrollRootRef.current;
     if (scrollRoot) scrollRoot.scrollTop = 0;
+    reportedReadingPercentsRef.current = new Set();
   }, [chapter?.id, chapterNumber, scrollRootRef]);
 
   useEffect(() => {
@@ -34,20 +36,47 @@ export function ReaderScreen({
     api.analytics(`начал читать Главу ${chapter.number}`, { bookTitle }).catch(console.error);
   }, [bookTitle, chapter, progressPayload]);
 
+  useEffect(() => {
+    if (!chapter) return;
+    const scrollRoot = scrollRootRef.current;
+    if (!scrollRoot) return;
+
+    const handleScroll = () => {
+      const scrollableHeight = scrollRoot.scrollHeight - scrollRoot.clientHeight;
+      if (scrollableHeight <= 0) return;
+
+      const currentPercent = Math.min(100, Math.max(0, (scrollRoot.scrollTop / scrollableHeight) * 100));
+      const crossedPercent = Math.floor(currentPercent / 10) * 10;
+
+      for (let percent = 10; percent <= crossedPercent; percent += 10) {
+        if (reportedReadingPercentsRef.current.has(percent)) continue;
+        reportedReadingPercentsRef.current.add(percent);
+        api.analytics(`читает главу ${chapter.number}`, { bookTitle, chapterNumber: chapter.number, percent }).catch(console.error);
+      }
+    };
+
+    scrollRoot.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => scrollRoot.removeEventListener("scroll", handleScroll);
+  }, [bookTitle, chapter, scrollRootRef]);
+
   const goToPreviousChapter = () => {
-    api.analytics("перешел на предыдущую главу", { bookTitle, chapterNumber }).catch(console.error);
-    onNavigate(Math.max(1, chapterNumber - 1));
+    onNavigate(Math.max(1, chapterNumber - 1), "previous");
   };
 
   const goToNextChapter = () => {
-    api.analytics("перешел на следующую главу", { bookTitle, chapterNumber }).catch(console.error);
-    onNavigate(chapterNumber + 1);
+    onNavigate(chapterNumber + 1, "next");
+  };
+
+  const leaveReader = () => {
+    api.analytics("вышел из чтения главы", { bookTitle, chapterNumber }).catch(console.error);
+    onBack();
   };
 
   return (
     <main className="reader-screen">
       <header className="reader-header">
-        <button className="text-button" onClick={onBack} type="button">
+        <button className="text-button" onClick={leaveReader} type="button">
           Назад
         </button>
         <div className="reader-title-block">
