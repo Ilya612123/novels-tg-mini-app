@@ -43,7 +43,6 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "Sync is already running: $LOCK_DIR" >&2
   exit 2
 fi
-trap 'rm -rf "$LOCK_DIR"' EXIT
 
 TMP_FILE="$OUTPUT_DIR/.prod.db.tmp.$$"
 TMP_ARCHIVE="$TMP_FILE.gz"
@@ -58,6 +57,19 @@ SSH_OPTIONS=(
 run_with_password() {
   PROD_DB_SYNC_PASSWORD="$PASSWORD" expect "$ROOT_DIR/scripts/prod-db-sync.expect" "$TIMEOUT_SECONDS" "$@"
 }
+
+REMOTE_CLEANUP_SCRIPT="
+rm -f '$REMOTE_FILE' '$REMOTE_ARCHIVE'
+rmdir '$REMOTE_TMP_DIR' 2>/dev/null || true
+"
+
+cleanup() {
+  rm -f "$TMP_FILE" "$TMP_ARCHIVE"
+  rm -rf "$LOCK_DIR"
+  run_with_password ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$REMOTE_CLEANUP_SCRIPT" >/dev/null 2>&1 || true
+}
+
+trap cleanup EXIT
 
 REMOTE_PREPARE_SCRIPT="
 set -e
@@ -83,11 +95,6 @@ test -s '$REMOTE_FILE'
 gzip -c '$REMOTE_FILE' > '$REMOTE_ARCHIVE'
 test -s '$REMOTE_ARCHIVE'
 ls -lh '$REMOTE_FILE' '$REMOTE_ARCHIVE' >&2
-"
-
-REMOTE_CLEANUP_SCRIPT="
-rm -f '$REMOTE_FILE' '$REMOTE_ARCHIVE'
-rmdir '$REMOTE_TMP_DIR' 2>/dev/null || true
 "
 
 echo "Preparing prod database on $HOST..."
@@ -119,8 +126,6 @@ fi
 rm -f "$OUTPUT_ABS"
 mv "$TMP_FILE" "$OUTPUT_ABS"
 chmod 600 "$OUTPUT_ABS"
-
-run_with_password ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$REMOTE_CLEANUP_SCRIPT" >/dev/null 2>&1 || true
 
 BYTES="$(wc -c < "$OUTPUT_ABS" | tr -d ' ')"
 echo "Synced prod database: $OUTPUT_ABS ($BYTES bytes)"
