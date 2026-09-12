@@ -103,6 +103,8 @@ function runSync() {
 
     child.on("close", async (code) => {
       const finishedAt = new Date().toISOString();
+      const trimmedOutput = output.trim();
+      const lastOutputLine = trimmedOutput.split(/\r?\n/).at(-1) ?? "";
       const status = {
         lastRun: {
           startedAt,
@@ -113,6 +115,10 @@ function runSync() {
         }
       };
       await writeStatus(status);
+      console.log(`Prod DB sync ${code === 0 ? "finished" : "failed"} at ${finishedAt} with exit code ${code}.`);
+      if (lastOutputLine) {
+        console.log(lastOutputLine);
+      }
       currentRun = null;
       resolve(status);
     });
