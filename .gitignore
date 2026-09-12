@@ -6,9 +6,12 @@ dist/
 apps/miniapp/vite.config.js
 package-lock.json
 .env
+.prod-db-sync.env
+.prod-db-sync-known-hosts
 # Local backup files
 *.bak-*
 local-db-dumps/
+local-db-dumps*
 
 # Generated converted images
 *.webp
