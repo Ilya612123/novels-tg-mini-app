@@ -21,17 +21,31 @@ describe("ReaderScreen", () => {
     vi.useRealTimers();
   });
 
+  function renderReader(options: { onBack?: () => void; onNavigate?: (chapterNumber: number, direction: "previous" | "next") => void; onProgressSaved?: ReturnType<typeof vi.fn> } = {}) {
+    const scrollRootRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={scrollRootRef}>
+        <ReaderScreen
+          chapter={chapter}
+          chapterNumber={chapter.number}
+          bookTitle="Башня Бога"
+          scrollRootRef={scrollRootRef}
+          onBack={options.onBack ?? vi.fn()}
+          onProgressSaved={options.onProgressSaved ?? vi.fn()}
+          onNavigate={options.onNavigate ?? vi.fn()}
+        />
+      </div>
+    );
+    return scrollRootRef;
+  }
+
   it("renders the full chapter and saves reading progress when opening it", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
     const onNavigate = vi.fn();
+    const onProgressSaved = vi.fn();
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
-      </div>
-    );
+    renderReader({ onNavigate, onProgressSaved });
 
     expect(screen.getByTestId("chapter-content").innerHTML).toBe("<p>Текст главы</p>");
     expect(onNavigate).not.toHaveBeenCalled();
@@ -48,12 +62,7 @@ describe("ReaderScreen", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
-      </div>
-    );
+    renderReader();
 
     expect(screen.getByRole("heading", { name: "Глава 1" }).closest(".reader-title-block")).not.toBeNull();
   });
@@ -62,12 +71,7 @@ describe("ReaderScreen", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
-      </div>
-    );
+    renderReader();
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/analytics",
@@ -83,12 +87,7 @@ describe("ReaderScreen", () => {
     vi.stubGlobal("fetch", fetchMock);
     const onNavigate = vi.fn();
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Новелла" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
-      </div>
-    );
+    renderReader({ onNavigate });
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
@@ -100,12 +99,7 @@ describe("ReaderScreen", () => {
     vi.stubGlobal("fetch", fetchMock);
     const onNavigate = vi.fn();
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={onNavigate} />
-      </div>
-    );
+    renderReader({ onNavigate });
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
@@ -122,12 +116,7 @@ describe("ReaderScreen", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={vi.fn()} onNavigate={vi.fn()} />
-      </div>
-    );
+    const scrollRootRef = renderReader();
 
     Object.defineProperty(scrollRootRef.current, "scrollHeight", { configurable: true, value: 1000 });
     Object.defineProperty(scrollRootRef.current, "clientHeight", { configurable: true, value: 100 });
@@ -148,6 +137,13 @@ describe("ReaderScreen", () => {
         body: JSON.stringify({ label: "читает главу 1", metadata: { bookTitle: "Башня Бога", chapterNumber: 1, percent: 20 } })
       })
     );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/progress",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ bookId: "book-1", chapterNumber: 1, position: 190, percent: 20 })
+      })
+    );
   });
 
   it("logs when leaving the reader with the back button", () => {
@@ -155,12 +151,7 @@ describe("ReaderScreen", () => {
     vi.stubGlobal("fetch", fetchMock);
     const onBack = vi.fn();
 
-    const scrollRootRef = createRef<HTMLDivElement>();
-    render(
-      <div ref={scrollRootRef}>
-        <ReaderScreen chapter={chapter} chapterNumber={chapter.number} bookTitle="Башня Бога" scrollRootRef={scrollRootRef} onBack={onBack} onNavigate={vi.fn()} />
-      </div>
-    );
+    renderReader({ onBack });
 
     fireEvent.click(screen.getByRole("button", { name: "Назад" }));
 

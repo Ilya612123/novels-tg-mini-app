@@ -13,7 +13,7 @@ import type { Tab } from "./components/BottomNav";
 import { ErrorState } from "./components/ErrorState";
 import { LoadingState } from "./components/LoadingState";
 import { getCatalogCategoryBooks, type CatalogCategory } from "./screens/catalogCategories";
-import { openInvoice, openTelegramLink } from "./telegram";
+import { getTelegramUser, openInvoice, openTelegramLink } from "./telegram";
 
 const BottomNav = lazy(() => import("./components/BottomNav").then((module) => ({ default: module.BottomNav })));
 const BookmarksScreen = lazy(() => import("./screens/BookmarksScreen").then((module) => ({ default: module.BookmarksScreen })));
@@ -56,6 +56,13 @@ const USER_SCROLL_INTENT_WINDOW_MS = 1_000;
 const CATALOG_SCROLL_BATCH_DELAY_MS = 500;
 const ACCESS_CONFIRMATION_ATTEMPTS = 6;
 const ACCESS_CONFIRMATION_DELAY_MS = 1_000;
+const COMMUNITY_URL = "https://t.me/+MsYpSxdAIdEwZGFi";
+
+type ReadingProgressUpdate = {
+  bookId: string;
+  chapterNumber: number;
+  percent: number | null;
+};
 
 function toAppError(err: unknown, fallbackMessage: string): AppError {
   if (err instanceof ApiError) return { status: err.status, message: err.message };
@@ -84,6 +91,10 @@ function normalizedScrollTop(scrollTop: number): number {
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function progressValue(progress: { chapterNumber: number; percent: number | null }): number {
+  return Math.max(0, progress.chapterNumber - 1) + (progress.percent ?? 0) / 100;
 }
 
 function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTarget | null {
@@ -126,6 +137,10 @@ export function App() {
   const [supportUrl, setSupportUrl] = useState<string | null>(null);
   const [accessStatus, setAccessStatus] = useState<AccessStatusDto | null>(null);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
+  const defaultUserName = useMemo(() => {
+    const user = getTelegramUser();
+    return user?.username ? `@${user.username}` : [user?.first_name, user?.last_name].filter(Boolean).join(" ") || null;
+  }, []);
   const pageScrollRootRef = useRef<HTMLDivElement>(null);
   const lastUserScrollIntentAtRef = useRef(0);
   const catalogScrollBatchRef = useRef<{ startScrollTop: number; endScrollTop: number } | null>(null);
@@ -233,6 +248,24 @@ export function App() {
 
   const handleCatalogSearch = useCallback((query: string, resultCount: number) => {
     api.analytics("искал в Каталоге", { query, resultCount }).catch(console.error);
+  }, []);
+
+  const updateLocalProgress = useCallback((progress: ReadingProgressUpdate) => {
+    setBooks((currentBooks) =>
+      currentBooks.map((book) => {
+        if (book.id !== progress.bookId) return book;
+        if (book.progress && progressValue(book.progress) > progressValue(progress)) return book;
+        return {
+          ...book,
+          progress: {
+            bookId: progress.bookId,
+            chapterNumber: progress.chapterNumber,
+            percent: progress.percent,
+            updatedAt: new Date().toISOString()
+          }
+        };
+      })
+    );
   }, []);
 
   const openBook = (bookId: string) => {
@@ -450,6 +483,8 @@ export function App() {
           {view.name === "profile" && (
             <ProfileScreen
               accessStatus={accessStatus}
+              books={books}
+              defaultUserName={defaultUserName}
               paymentStatusMessage={paymentStatusMessage}
               onOpenPaywall={() => {
                 api.analytics("открыл paywall из профиля").catch(console.error);
@@ -461,6 +496,10 @@ export function App() {
                 api.analytics("открыл поддержку из профиля").catch(console.error);
                 openTelegramLink(supportUrl);
               }}
+              onOpenCommunity={() => {
+                api.analytics("открыл сообщество из профиля").catch(console.error);
+                openTelegramLink(COMMUNITY_URL);
+              }}
             />
           )}
           {view.name === "bookmarks" && (
@@ -470,6 +509,8 @@ export function App() {
                 api.analytics("продолжил чтение из закладок", { bookTitle: book.title }).catch(console.error);
                 void openChapter(book.id, book.progress?.chapterNumber ?? 1);
               }}
+              onOpenBook={openBook}
+              onOpenPopular={() => setView({ name: "catalog-category", category: "popular" })}
             />
           )}
           {view.name === "novel" && currentBook && (
@@ -488,6 +529,7 @@ export function App() {
               bookTitle={currentBook.title}
               scrollRootRef={pageScrollRootRef}
               onBack={() => setView({ name: "novel", bookId: currentBook.id })}
+              onProgressSaved={updateLocalProgress}
               onNavigate={(chapterNumber, direction) => {
                 api
                   .analytics(direction === "next" ? "нажал вперед" : "нажал назад", {

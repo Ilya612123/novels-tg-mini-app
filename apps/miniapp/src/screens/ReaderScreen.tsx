@@ -3,12 +3,20 @@ import type { ChapterDto } from "@novell-reader/shared";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { api } from "../api/client";
 
+type ReadingProgressUpdate = {
+  bookId: string;
+  chapterNumber: number;
+  position: number;
+  percent: number | null;
+};
+
 export function ReaderScreen({
   chapter,
   chapterNumber,
   bookTitle,
   scrollRootRef,
   onBack,
+  onProgressSaved,
   onNavigate
 }: {
   chapter: ChapterDto | null;
@@ -16,6 +24,7 @@ export function ReaderScreen({
   bookTitle: string;
   scrollRootRef: RefObject<HTMLElement | null>;
   onBack: () => void;
+  onProgressSaved: (progress: ReadingProgressUpdate) => void;
   onNavigate: (chapterNumber: number, direction: "previous" | "next") => void;
 }) {
   const reportedReadingPercentsRef = useRef<Set<number>>(new Set());
@@ -32,9 +41,12 @@ export function ReaderScreen({
 
   useEffect(() => {
     if (!chapter || !progressPayload) return;
-    api.saveProgress(progressPayload).catch(console.error);
+    api
+      .saveProgress(progressPayload)
+      .then(() => onProgressSaved(progressPayload))
+      .catch(console.error);
     api.analytics(`начал читать Главу ${chapter.number}`, { bookTitle }).catch(console.error);
-  }, [bookTitle, chapter, progressPayload]);
+  }, [bookTitle, chapter, onProgressSaved, progressPayload]);
 
   useEffect(() => {
     if (!chapter) return;
@@ -51,6 +63,11 @@ export function ReaderScreen({
       for (let percent = 10; percent <= crossedPercent; percent += 10) {
         if (reportedReadingPercentsRef.current.has(percent)) continue;
         reportedReadingPercentsRef.current.add(percent);
+        const payload = { bookId: chapter.bookId, chapterNumber: chapter.number, position: Math.round(scrollRoot.scrollTop), percent };
+        api
+          .saveProgress(payload)
+          .then(() => onProgressSaved(payload))
+          .catch(console.error);
         api.analytics(`читает главу ${chapter.number}`, { bookTitle, chapterNumber: chapter.number, percent }).catch(console.error);
       }
     };
@@ -58,7 +75,7 @@ export function ReaderScreen({
     scrollRoot.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => scrollRoot.removeEventListener("scroll", handleScroll);
-  }, [bookTitle, chapter, scrollRootRef]);
+  }, [bookTitle, chapter, onProgressSaved, scrollRootRef]);
 
   const goToPreviousChapter = () => {
     onNavigate(Math.max(1, chapterNumber - 1), "previous");

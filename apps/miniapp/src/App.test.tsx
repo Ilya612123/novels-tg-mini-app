@@ -14,6 +14,7 @@ describe("App", () => {
 
   afterEach(() => {
     cleanup();
+    window.localStorage?.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -644,7 +645,7 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByText("Закладки"));
     expect(await screen.findByRole("heading", { level: 1, name: "Закладки" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Тестовая новелла/ }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Продолжить чтение" })).getByRole("button", { name: /Тестовая новелла/ }));
 
     expect(await screen.findByText("Глава 4")).toBeTruthy();
     await waitFor(() =>
@@ -716,6 +717,27 @@ describe("App", () => {
     fireEvent.click(supportButton);
 
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/custom_support");
+  });
+
+  it("opens the community chat from the profile", async () => {
+    const openTelegramLink = vi.fn();
+    vi.stubGlobal("Telegram", { WebApp: { openTelegramLink } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Профиль"));
+    fireEvent.click(await screen.findByRole("button", { name: "Сообщество" }));
+
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/+MsYpSxdAIdEwZGFi");
   });
 
   it("creates payment for the selected subscription plan", async () => {

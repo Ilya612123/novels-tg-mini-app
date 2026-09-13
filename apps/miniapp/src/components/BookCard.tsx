@@ -6,7 +6,7 @@ export function BookCard({ book, onOpen }: { book: BookSummary; onOpen: (bookId:
   const ratingText = book.rating.averageScore.toFixed(1);
 
   return (
-    <button className="book-card" onClick={() => onOpen(book.id)} type="button">
+    <button aria-label={book.title} className="book-card" onClick={() => onOpen(book.id)} type="button">
       <div className="cover">
         <span className="book-rating-badge" aria-label={`Средняя оценка ${ratingText} из 10`}>
           {ratingText}

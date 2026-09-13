@@ -6,6 +6,13 @@ type TelegramWebApp = {
   openTelegramLink?: (url: string) => void;
 };
 
+export type TelegramUser = {
+  id: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+};
+
 declare global {
   interface Window {
     Telegram?: {
@@ -23,6 +30,19 @@ export function initTelegramApp() {
 
 export function getTelegramInitData(): string {
   return window.Telegram?.WebApp?.initData ?? "";
+}
+
+export function getTelegramUser(): TelegramUser | null {
+  const userRaw = new URLSearchParams(getTelegramInitData()).get("user");
+  if (!userRaw) return null;
+
+  try {
+    const user = JSON.parse(userRaw) as unknown;
+    if (!user || typeof user !== "object" || !("id" in user) || typeof user.id !== "number") return null;
+    return user as TelegramUser;
+  } catch {
+    return null;
+  }
 }
 
 export function openInvoice(url: string, callback?: (status: string) => void) {
