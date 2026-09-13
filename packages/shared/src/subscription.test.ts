@@ -4,9 +4,8 @@ import { findSubscriptionPlan, paywallDiscountWinbackOffers, RUB_PER_TELEGRAM_ST
 describe("subscription pricing", () => {
   it("converts ruble subscription prices to Telegram Stars", () => {
     expect(RUB_PER_TELEGRAM_STAR).toBe(1.8);
+    expect(findSubscriptionPlan("week")).toMatchObject({ priceLabel: "99₽", starsAmount: 55 });
     expect(findSubscriptionPlan("month")).toMatchObject({ priceLabel: "299₽", starsAmount: 167 });
-    expect(findSubscriptionPlan("four-months")).toMatchObject({ priceLabel: "819₽", starsAmount: 455 });
-    expect(findSubscriptionPlan("half-year")).toMatchObject({ priceLabel: "1499₽", starsAmount: 833 });
     expect(findSubscriptionPlan("year")).toMatchObject({ priceLabel: "2999₽", starsAmount: 1667 });
   });
 

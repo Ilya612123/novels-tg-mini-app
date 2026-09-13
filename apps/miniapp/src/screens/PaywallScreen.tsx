@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
-import { Check, Crown } from "lucide-react";
+import { BookOpen, Crown, Download, Headphones, Sparkles, WifiOff } from "lucide-react";
 import { type SubscriptionPlan, type SubscriptionPlanId } from "@novell-reader/shared";
+
+const premiumBenefits = [
+  { icon: BookOpen, label: "доступ ко всем главам" },
+  { icon: Download, label: "скачивание новелл" },
+  { icon: WifiOff, label: "офлайн чтение" },
+  { icon: Sparkles, label: "эксклюзивные новеллы" },
+  { icon: Headphones, label: "ВИП поддержка" }
+];
+
+const planPricePeriods: Partial<Record<SubscriptionPlanId, string>> = {
+  week: "нед",
+  month: "мес",
+  year: "год",
+  "month-50-off": "мес"
+};
 
 export function PaywallScreen({
   paymentStatusMessage,
@@ -27,10 +42,27 @@ export function PaywallScreen({
         <button className="text-button" onClick={onBack} type="button">
           Назад
         </button>
-        <h1>Подписка</h1>
+        <h1>VIP</h1>
       </header>
 
       {paymentStatusMessage && <p className="paywall-payment-status">{paymentStatusMessage}</p>}
+
+      <section className="paywall-premium-intro" aria-labelledby="paywall-premium-title">
+        <h2 className="paywall-benefits-title" id="paywall-premium-title">
+          <Crown aria-hidden="true" size={22} />
+          Преимущества Premium
+        </h2>
+        <ul className="paywall-benefits-list">
+          {premiumBenefits.map(({ icon: Icon, label }) => (
+            <li className="paywall-benefit" key={label}>
+              <span className="paywall-benefit-icon" aria-hidden="true">
+                <Icon size={9} />
+              </span>
+              <span>{label}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="subscription-plans" role="radiogroup" aria-label="Тарифы подписки">
         {plans.map((plan) => (
@@ -50,25 +82,19 @@ export function PaywallScreen({
             </span>
             <span className="subscription-price">
               {plan.oldPrice && <small>{plan.oldPrice}</small>}
-              <strong>{plan.priceLabel}</strong>
+              <span className="subscription-price-value">
+                <strong>{plan.priceLabel}</strong>
+                {planPricePeriods[plan.id] && <span className="subscription-price-period">/{planPricePeriods[plan.id]}</span>}
+              </span>
             </span>
             <span className="subscription-radio-mark" aria-hidden="true" />
           </label>
         ))}
       </section>
 
-      <div className="paywall-benefits" aria-label="Что входит">
-        <span>
-          <Check size={17} /> Все главы
-        </span>
-        <span>
-          <Crown size={17} /> Без ожидания
-        </span>
-      </div>
-
       <div className="paywall-buy-bar">
         <button className="primary-button paywall-buy-button" onClick={() => onBuy(selectedPlan.id)} type="button">
-          Купить подписку · {selectedPlan.priceLabel}
+          Подписаться сейчас
         </button>
       </div>
     </main>

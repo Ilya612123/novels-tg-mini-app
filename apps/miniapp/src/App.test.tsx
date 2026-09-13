@@ -430,11 +430,12 @@ describe("App", () => {
     await clickFirstBookCard("Тестовая новелла");
     fireEvent.click(await screen.findByText("Продолжить"));
 
-    await waitFor(() => expect(screen.getByText("Подписка")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("VIP")).toBeTruthy());
     expect(screen.queryByText("Читайте продолжение без ограничений и открывайте платные главы сразу после оплаты.")).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "Тарифы подписки" })).toBeTruthy();
-    expect((screen.getByRole("radio", { name: /Месяц/ }) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByRole("button", { name: "Купить подписку · 299₽" })).toBeTruthy();
+    expect((screen.getByRole("radio", { name: /Недельный VIP/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("button", { name: "Подписаться сейчас" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Основная навигация" })).toBeNull();
   });
 
   it("opens the reader skeleton immediately while continuing to a chapter", async () => {
@@ -576,7 +577,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Следующая глава" }));
 
-    await screen.findByText("Подписка");
+    await screen.findByText("VIP");
     const paywallScrollRoot = screen.getByTestId("page-scroll-root");
     expect(paywallScrollRoot).not.toBe(readerScrollRoot);
     expect(paywallScrollRoot.scrollTop).toBe(0);
@@ -740,17 +741,15 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByText("Купить подписку"));
 
-    expect(await screen.findByText("Подписка")).toBeTruthy();
+    expect(await screen.findByText("VIP")).toBeTruthy();
     expect(screen.queryByText("Читайте продолжение без ограничений и открывайте платные главы сразу после оплаты.")).toBeNull();
-    expect((screen.getByRole("radio", { name: /Месяц/ }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(screen.getByRole("radio", { name: /4 месяца/ }));
-    expect((screen.getByRole("radio", { name: /4 месяца/ }) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByRole("button", { name: "Купить подписку · 819₽" })).toBeTruthy();
+    expect((screen.getByRole("radio", { name: /Недельный VIP/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole("radio", { name: /Месячный VIP/ }));
+    expect((screen.getByRole("radio", { name: /Месячный VIP/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("button", { name: "Подписаться сейчас" })).toBeTruthy();
+    expect(screen.getByText("99₽")).toBeTruthy();
     expect(screen.getAllByText("299₽").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("819₽").length).toBeGreaterThan(0);
-    expect(screen.getByText("1499₽")).toBeTruthy();
     expect(screen.getByText("2999₽")).toBeTruthy();
-    expect(screen.getAllByText(/Скидка/).length).toBeGreaterThan(0);
   });
 
   it("opens the support account from the profile", async () => {
@@ -817,15 +816,15 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByText("Профиль"));
     fireEvent.click(await screen.findByText("Купить подписку"));
-    fireEvent.click(screen.getByRole("radio", { name: /4 месяца/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 819₽" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Месячный VIP/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться сейчас" }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/payments/create",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ planId: "four-months" })
+          body: JSON.stringify({ planId: "month" })
         })
       )
     );
@@ -888,7 +887,7 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByText("Профиль"));
     fireEvent.click(await screen.findByText("Купить подписку"));
-    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться сейчас" }));
 
     await waitFor(() => expect(openInvoice).toHaveBeenCalledWith("https://t.me/invoice", expect.any(Function)));
     invoiceCallbacks[0]?.("cancelled");
@@ -915,7 +914,7 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByText("Подписка открывает продолжение без ограничений.")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Купить подписку"));
-    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться сейчас" }));
     await waitFor(() => expect(openInvoice).toHaveBeenCalledTimes(3));
     invoiceCallbacks[2]?.("cancelled");
     expect(await screen.findByText("Не хватает Stars?")).toBeTruthy();
@@ -956,7 +955,7 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByText("Профиль"));
     fireEvent.click(await screen.findByText("Купить подписку"));
-    fireEvent.click(screen.getByRole("button", { name: "Купить подписку · 299₽" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться сейчас" }));
 
     await waitFor(() => expect(openInvoice).toHaveBeenCalledWith("https://t.me/invoice", expect.any(Function)));
     invoiceCallbacks[0]?.("paid");

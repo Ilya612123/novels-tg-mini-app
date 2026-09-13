@@ -82,7 +82,24 @@ describe("miniapp design system", () => {
 
   it("reserves bottom space on the paywall for the fixed buy button", () => {
     expect(css).toContain("--paywall-buy-bar-reserve: calc(var(--control-height-lg) + var(--space-6) + var(--safe-area-bottom))");
-    expect(css).toMatch(/\.paywall-screen\s*{[^}]*padding-bottom:\s*calc\(var\(--nav-height\) \+ var\(--paywall-buy-bar-reserve\) \+ var\(--space-5\)\)/s);
+    expect(css).toMatch(/\.paywall-screen\s*{[^}]*min-height:\s*100%/s);
+    expect(css).toMatch(/\.paywall-screen\s*{[^}]*padding-bottom:\s*calc\(var\(--paywall-buy-bar-reserve\) \+ var\(--space-5\)\)/s);
+    expect(css).toMatch(/\.paywall-buy-bar\s*{[^}]*bottom:\s*0/s);
+  });
+
+  it("uses a static full-screen background image on the paywall", () => {
+    expect(css).toContain('--paywall-background-image: url("./assets/paywall-background.webp")');
+    expect(css).toMatch(/\.paywall-screen::before\s*{[^}]*position:\s*fixed/s);
+    expect(css).toMatch(/\.paywall-screen::before\s*{[^}]*background-image:\s*var\(--gradient-paywall-background-overlay\), var\(--paywall-background-image\)/s);
+    expect(css).toMatch(/\.paywall-screen::before\s*{[^}]*background-size:\s*cover/s);
+  });
+
+  it("shows premium benefits above the paywall plans", () => {
+    expect(css).toContain("--paywall-benefit-icon-size: 19px");
+    expect(css).toMatch(/\.paywall-premium-intro\s*{[^}]*display:\s*grid/s);
+    expect(css).toMatch(/\.paywall-benefits-title\s*{[^}]*color:\s*var\(--color-premium\)/s);
+    expect(css).toMatch(/\.paywall-benefits-list\s*{[^}]*list-style:\s*none/s);
+    expect(css).toMatch(/\.paywall-benefit\s*{[^}]*grid-template-columns:\s*var\(--paywall-benefit-icon-size\) minmax\(0, 1fr\)/s);
   });
 
   it("lays out the reader as full-chapter vertical scrolling text", () => {

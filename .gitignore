@@ -15,4 +15,5 @@ local-db-dumps*
 
 # Generated converted images
 *.webp
+!apps/miniapp/src/assets/paywall-background.webp
 .env

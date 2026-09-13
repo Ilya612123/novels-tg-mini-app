@@ -477,9 +477,10 @@ export function App() {
   if (error) return <ErrorState message={error.message} />;
 
   const pageScrollClassName = view.name === "reader" ? "app-page-scroll app-page-scroll-reader" : "app-page-scroll";
+  const appShellClassName = view.name === "paywall" ? "app-shell app-shell-paywall" : "app-shell";
 
   return (
-    <div className="app-shell">
+    <div className={appShellClassName}>
       <div
         className={pageScrollClassName}
         data-testid="page-scroll-root"
@@ -590,7 +591,7 @@ export function App() {
           <PaywallWinbackModal offer={winbackOffer} onAction={handleWinbackAction} onClose={showNextWinbackOfferOrLeave} />
         </Suspense>
       )}
-      {view.name !== "reader" && (
+      {view.name !== "reader" && view.name !== "paywall" && (
         <BottomNav
           activeTab={activeTab}
           onChange={(tab) => {

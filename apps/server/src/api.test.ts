@@ -160,21 +160,21 @@ describe("createApiServer", () => {
     await request(app)
       .post("/api/payments/create")
       .set("x-dev-telegram-user-id", "5100586818")
-      .send({ planId: "four-months" })
+      .send({ planId: "week" })
       .expect(200);
 
     expect(createInvoiceLink).toHaveBeenCalledWith(
-      "Доступ к новеллам на 4 месяца",
-      "Откройте продолжение всех новелл на 4 месяца.",
+      "Доступ к новеллам на 7 дней",
+      "Откройте продолжение всех новелл на 7 дней.",
       expect.any(String),
       "",
       "XTR",
-      [{ label: "4 месяца доступа", amount: 455 }]
+      [{ label: "7 дней доступа", amount: 55 }]
     );
     await expect(testDb.db.payment.findFirstOrThrow()).resolves.toMatchObject({
-      planId: "four-months",
-      starsAmount: 455,
-      accessDays: 120
+      planId: "week",
+      starsAmount: 55,
+      accessDays: 7
     });
   });
 
@@ -223,9 +223,8 @@ describe("createApiServer", () => {
     const res = await request(app).get("/api/paywall/plans").set("x-dev-telegram-user-id", "5100586818").expect(200);
 
     expect(res.body.plans.map((plan: { id: string }) => plan.id)).toEqual([
+      "week",
       "month",
-      "four-months",
-      "half-year",
       "year",
       "month-50-off"
     ]);
