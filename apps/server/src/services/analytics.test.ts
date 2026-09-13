@@ -65,7 +65,7 @@ describe("flushAnalyticsToTelegram", () => {
       now: new Date("2026-08-11T09:22:00.000Z")
     });
 
-    expect(sendMessage.mock.calls[0]![1]).toContain("искал в Каталоге query=баш resultCount=1");
+    expect(sendMessage.mock.calls[0]![1]).toContain("искал в Каталоге: запрос «баш», результатов 1");
   });
 
   it("splits large analytics digests into Telegram-sized messages", async () => {
@@ -102,15 +102,10 @@ describe("flushAnalyticsToTelegram", () => {
       await recordAnalyticsEvent(testDb.db, {
         userId: "5100586818",
         username: "barboruss",
-        source: "bot",
-        label: "push_scheduled",
+        source: "miniapp",
+        label: "длинное событие",
         metadata: {
-          scenario: "opened_app_no_read",
-          templateId: "opened_app_no_read_v1",
-          messageText: "Подобрали несколько историй на вечер. Начать с первой главы?",
-          scheduledAt: "2026-08-11T09:21:03.000Z",
-          progressUpdatedAt: "2026-08-11T08:21:03.000Z",
-          deepLink: `https://reader.example.test/?push=${index}&payload=${"x".repeat(90)}`
+          payload: `event-${index}-${"x".repeat(180)}`
         },
         occurredAt: new Date(occurredAt.getTime() + index * 1000)
       });

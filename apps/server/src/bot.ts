@@ -18,6 +18,8 @@ const START_MESSAGE_TEXT = `Привет. Тут истории про запр�
 
 Начни с первой главы — если не зацепит, просто выберешь другую.`;
 
+const COMMUNITY_URL = "https://t.me/+MsYpSxdAIdEwZGFi";
+
 const START_PHOTO_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "content", "bot", "start.jpg");
 
 function withMiniAppParams(baseUrl: string, params: Record<string, string>): string {
@@ -59,7 +61,9 @@ export function createBot(deps: BotDeps): Bot {
       .row()
       .webApp("Случайная книга", withMiniAppParams(deps.config.MINI_APP_URL, { random: "1" }))
       .row()
-      .url("Поддержка", deps.config.SUPPORT_URL);
+      .url("Поддержка", deps.config.SUPPORT_URL)
+      .row()
+      .url("Сообщество", COMMUNITY_URL);
 
     await ctx.replyWithPhoto(new InputFile(START_PHOTO_PATH), {
       caption: START_MESSAGE_TEXT,

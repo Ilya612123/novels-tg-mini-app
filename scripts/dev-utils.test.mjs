@@ -62,8 +62,14 @@ test("stopPortListeners sends SIGTERM once for each unique listener PID", async 
   assert.deepEqual(killedPids, [6468, 3034]);
 });
 
-test("getDevPreparationCommands syncs the local Prisma database and imports EPUB before startup", () => {
+test("getDevPreparationCommands builds shared code, syncs the local Prisma database and imports EPUB before startup", () => {
   assert.deepEqual(getDevPreparationCommands(), [
+    {
+      name: "shared-build",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/shared", "build"],
+      env: {}
+    },
     {
       name: "prisma",
       command: "pnpm",

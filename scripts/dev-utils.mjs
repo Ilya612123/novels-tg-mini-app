@@ -108,6 +108,12 @@ export function getDevPreparationCommands() {
 
   return [
     {
+      name: "shared-build",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/shared", "build"],
+      env: {}
+    },
+    {
       name: "prisma",
       command: "pnpm",
       args: ["--filter", "@novell-reader/server", "exec", "prisma", "db", "push"],

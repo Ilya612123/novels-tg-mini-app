@@ -35,18 +35,44 @@ function formatMetadataValue(value: unknown): string | null {
   return JSON.stringify(value);
 }
 
+function quoted(value: string): string {
+  return `«${value}»`;
+}
+
+function formatKnownMetadata(key: string, value: unknown): string | null {
+  const formattedValue = formatMetadataValue(value);
+  if (formattedValue == null) return null;
+
+  if (key === "bookTitle") return `в ${quoted(formattedValue)}`;
+  if (key === "chapterTitle") return `глава ${quoted(formattedValue)}`;
+  if (key === "chapterNumber") return `глава ${formattedValue}`;
+  if (key === "fromChapterNumber") return `с главы ${formattedValue}`;
+  if (key === "toChapterNumber") return `на главу ${formattedValue}`;
+  if (key === "durationMs") return `за ${formatDuration(Number(value))}`;
+  if (key === "elapsedSec") return `прошло ${formattedValue} сек`;
+  if (key === "query") return `запрос ${quoted(formattedValue)}`;
+  if (key === "resultCount") return `результатов ${formattedValue}`;
+  if (key === "bookCount") return `книг ${formattedValue}`;
+  if (key === "startScrollTop") return `скролл с ${formattedValue}`;
+  if (key === "endScrollTop") return `до ${formattedValue}`;
+  if (key === "planId") return `тариф ${formattedValue}`;
+  if (key === "status") return `статус ${formattedValue}`;
+  if (key === "supportUrl") return `ссылка ${formattedValue}`;
+  if (key === "pushId") return `пуш ${formattedValue}`;
+  if (key === "scenario") return `сценарий ${formattedValue}`;
+
+  return `${key}: ${formattedValue}`;
+}
+
 function formatMetadata(metadata: unknown): string {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return "";
 
   const parts = Object.entries(metadata)
     .filter(([key]) => key !== "bookId")
-    .map(([key, value]) => {
-      const formattedValue = formatMetadataValue(value);
-      return formattedValue == null ? null : `${key}=${formattedValue}`;
-    })
+    .map(([key, value]) => formatKnownMetadata(key, value))
     .filter((part): part is string => Boolean(part));
 
-  return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+  return parts.length > 0 ? `: ${parts.join(", ")}` : "";
 }
 
 function metadataRecord(metadata: unknown): Record<string, unknown> | null {

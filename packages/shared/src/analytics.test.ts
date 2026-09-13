@@ -42,7 +42,10 @@ describe("formatAnalyticsBatch", () => {
     expect(text).toContain("Логи за 12:21-12:22");
     expect(text).toContain("user 5100586818 @barboruss");
     expect(text).toContain("12:21:03 старт бота");
-    expect(text).toContain("12:21:34 искал в Каталоге query=баш resultCount=1");
+    expect(text).toContain("12:21:24 начал читать Главу 1");
+    expect(text).toContain("12:21:34 искал в Каталоге: запрос «баш», результатов 1");
+    expect(text).not.toContain("query=");
+    expect(text).not.toContain("resultCount=");
     expect(text).toContain("активность в mini app: 23 сек");
   });
 
@@ -54,6 +57,54 @@ describe("formatAnalyticsBatch", () => {
         events: []
       })
     ).toBeNull();
+  });
+
+  it("formats generic metadata without key-value equals syntax", () => {
+    const text = formatAnalyticsBatch({
+      from: new Date("2026-08-11T09:21:00.000Z"),
+      to: new Date("2026-08-11T09:22:00.000Z"),
+      events: [
+        {
+          userId: "639435736",
+          username: "username",
+          occurredAt: new Date("2026-08-11T09:21:03.000Z"),
+          label: "активен в Mini App",
+          metadata: { elapsedSec: 320 },
+          source: "miniapp"
+        },
+        {
+          userId: "639435736",
+          username: "username",
+          occurredAt: new Date("2026-08-11T09:21:13.000Z"),
+          label: "открыл книгу",
+          metadata: { bookId: "book-1", bookTitle: "Замок" },
+          source: "miniapp"
+        },
+        {
+          userId: "639435736",
+          username: "username",
+          occurredAt: new Date("2026-08-11T09:21:23.000Z"),
+          label: "скролл Каталога вниз",
+          metadata: { startScrollTop: 1, endScrollTop: 454 },
+          source: "miniapp"
+        },
+        {
+          userId: "639435736",
+          username: "username",
+          occurredAt: new Date("2026-08-11T09:21:33.000Z"),
+          label: "нажал кнопку оплаты",
+          metadata: { bookTitle: "Замок", chapterNumber: 4, planId: "month" },
+          source: "miniapp"
+        }
+      ]
+    });
+
+    expect(text).toContain("активен в Mini App: прошло 320 сек");
+    expect(text).toContain("открыл книгу: в «Замок»");
+    expect(text).toContain("скролл Каталога вниз: скролл с 1, до 454");
+    expect(text).toContain("нажал кнопку оплаты: в «Замок», глава 4, тариф month");
+    expect(text).not.toMatch(/[A-Za-z][A-Za-z0-9]*=/);
+    expect(text).not.toContain("book-1");
   });
 
   it("formats reader analytics for Telegram without raw metadata keys", () => {

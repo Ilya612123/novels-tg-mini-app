@@ -14,6 +14,7 @@ describe("App", () => {
 
   afterEach(() => {
     cleanup();
+    window.history.pushState(null, "", "/");
     window.localStorage?.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -35,6 +36,65 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByText("Книги")).toBeTruthy());
     expect(screen.getByText("Закладки")).toBeTruthy();
     expect(screen.getByText("Профиль")).toBeTruthy();
+  });
+
+  it("opens bookmarks as a routed page", async () => {
+    window.history.pushState(null, "", "/bookmarks");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Закладки" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Закладки/ }).className).toContain("active");
+  });
+
+  it("opens profile as a routed page", async () => {
+    window.history.pushState(null, "", "/profile");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("Подписка открывает продолжение без ограничений.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Профиль/ }).className).toContain("active");
+  });
+
+  it("updates the route from bottom navigation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/books")) {
+          return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText("Закладки"));
+    expect(window.location.pathname).toBe("/bookmarks");
+
+    fireEvent.click(screen.getByText("Профиль"));
+    expect(window.location.pathname).toBe("/profile");
+
+    fireEvent.click(screen.getByText("Книги"));
+    expect(window.location.pathname).toBe("/");
   });
 
   it("opens catalog categories as separate app views", async () => {

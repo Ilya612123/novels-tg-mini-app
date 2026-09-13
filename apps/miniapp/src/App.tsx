@@ -64,6 +64,18 @@ type ReadingProgressUpdate = {
   percent: number | null;
 };
 
+function getRoutedView(pathname = window.location.pathname): View {
+  if (pathname === "/bookmarks") return { name: "bookmarks" };
+  if (pathname === "/profile") return { name: "profile" };
+  return { name: "catalog" };
+}
+
+function getTabPath(tab: Tab): string {
+  if (tab === "bookmarks") return "/bookmarks";
+  if (tab === "profile") return "/profile";
+  return "/";
+}
+
 function toAppError(err: unknown, fallbackMessage: string): AppError {
   if (err instanceof ApiError) return { status: err.status, message: err.message };
   return { status: null, message: err instanceof Error ? err.message : fallbackMessage };
@@ -129,7 +141,7 @@ function getPushDeepLinkTarget(search = window.location.search): PushDeepLinkTar
 
 export function App() {
   const [books, setBooks] = useState<BookSummary[]>([]);
-  const [view, setView] = useState<View>({ name: "catalog" });
+  const [view, setView] = useState<View>(() => getRoutedView());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
   const [winbackOffer, setWinbackOffer] = useState<PaywallWinbackOffer | null>(null);
@@ -148,6 +160,12 @@ export function App() {
   const pushDeepLinkConsumedRef = useRef(false);
   const chapterRequestIdRef = useRef(0);
   const viewKey = getViewKey(view);
+
+  useEffect(() => {
+    const handlePopState = () => setView(getRoutedView());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     api.analytics("открыл Mini App").catch(console.error);
@@ -268,6 +286,14 @@ export function App() {
     );
   }, []);
 
+  const openTab = useCallback((tab: Tab) => {
+    const nextPath = getTabPath(tab);
+    if (window.location.pathname !== nextPath) window.history.pushState(null, "", nextPath);
+    if (tab === "profile") setView({ name: "profile" });
+    if (tab === "bookmarks") setView({ name: "bookmarks" });
+    if (tab === "catalog") setView({ name: "catalog" });
+  }, []);
+
   const openBook = (bookId: string) => {
     setView({ name: "novel", bookId });
     const book = books.find((item) => item.id === bookId);
@@ -360,7 +386,7 @@ export function App() {
   const leavePaywall = () => {
     if (view.name !== "paywall") return;
     if (view.returnTo === "profile" || !view.bookId) {
-      setView({ name: "profile" });
+      openTab("profile");
       return;
     }
     setView({ name: "novel", bookId: view.bookId });
@@ -409,7 +435,7 @@ export function App() {
           if (view.name === "paywall" && view.bookId && view.chapterNumber) {
             void openChapter(view.bookId, view.chapterNumber);
           } else {
-            setView({ name: "profile" });
+            openTab("profile");
           }
           return;
         }
@@ -424,7 +450,7 @@ export function App() {
 
     setPaymentStatusMessage("Оплата получена. Если подписка не появится через несколько секунд, откройте профиль заново или напишите в поддержку.");
     api.analytics("subscription_activation_timeout").catch(console.error);
-    setView({ name: "profile" });
+    openTab("profile");
   };
 
   const handleWinbackAction = () => {
@@ -568,9 +594,7 @@ export function App() {
         <BottomNav
           activeTab={activeTab}
           onChange={(tab) => {
-            if (tab === "profile") setView({ name: "profile" });
-            if (tab === "bookmarks") setView({ name: "bookmarks" });
-            if (tab === "catalog") setView({ name: "catalog" });
+            openTab(tab);
             if (tab === "profile") api.analytics("открыл Профиль").catch(console.error);
             if (tab === "bookmarks") api.analytics("открыл Закладки").catch(console.error);
             if (tab === "catalog") api.analytics("открыл Каталог").catch(console.error);
