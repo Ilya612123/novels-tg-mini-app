@@ -2,7 +2,12 @@ import type { AnalyticsEvent } from "@prisma/client";
 import type { Bot } from "grammy";
 import { formatAnalyticsBatch, type AnalyticsEventForFormat } from "@novell-reader/shared";
 import type { DbClient } from "../db.js";
-import { listUnflushedAnalyticsEvents, markAnalyticsEventsFlushed, recordAnalyticsEvent } from "../repositories/analytics.js";
+import {
+  claimAnalyticsEventsForFlush,
+  listUnflushedAnalyticsEvents,
+  recordAnalyticsEvent,
+  releaseAnalyticsEventsFlushClaim
+} from "../repositories/analytics.js";
 import { findAttributionForStartEvent } from "../repositories/userAttributions.js";
 
 const ANALYTICS_EVENTS_PER_MESSAGE = 50;
@@ -136,12 +141,20 @@ export async function flushAnalyticsToTelegram(input: {
     const text = await formatAnalyticsEvents(input.db, batch, now);
     if (!text) continue;
 
-    await input.bot.api.sendMessage(input.chatId, fitTelegramMessage(text));
-    await markAnalyticsEventsFlushed(
-      input.db,
-      batch.map((event) => event.id),
-      now
-    );
+    const eventIds = batch.map((event) => event.id);
+    const claimedAt = new Date();
+    const claimedCount = await claimAnalyticsEventsForFlush(input.db, eventIds, claimedAt);
+    if (claimedCount !== eventIds.length) {
+      if (claimedCount > 0) await releaseAnalyticsEventsFlushClaim(input.db, eventIds, claimedAt);
+      continue;
+    }
+
+    try {
+      await input.bot.api.sendMessage(input.chatId, fitTelegramMessage(text));
+    } catch (error) {
+      await releaseAnalyticsEventsFlushClaim(input.db, eventIds, claimedAt);
+      throw error;
+    }
     sentCount += batch.length;
   }
 

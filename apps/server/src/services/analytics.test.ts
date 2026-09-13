@@ -223,4 +223,56 @@ describe("flushAnalyticsToTelegram", () => {
     expect(sendMessage.mock.calls[0]![1]).not.toContain("старт бота");
     expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(1);
   });
+
+  it("does not send duplicate digests when flushes overlap", async () => {
+    await recordAnalyticsEvent(testDb.db, {
+      userId: "5100586818",
+      username: "barboruss",
+      source: "miniapp",
+      label: "открыл Mini App",
+      occurredAt: new Date("2026-08-11T09:21:11.000Z")
+    });
+
+    const sendMessage = vi.fn().mockResolvedValue({});
+    const results = await Promise.all([
+      flushAnalyticsToTelegram({
+        db: testDb.db,
+        bot: { api: { sendMessage } } as unknown as Bot,
+        chatId: "-1001",
+        now: new Date("2026-08-11T09:22:00.000Z")
+      }),
+      flushAnalyticsToTelegram({
+        db: testDb.db,
+        bot: { api: { sendMessage } } as unknown as Bot,
+        chatId: "-1001",
+        now: new Date("2026-08-11T09:22:00.000Z")
+      })
+    ]);
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(results.filter((result) => result.sent)).toHaveLength(1);
+    expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(0);
+  });
+
+  it("releases claimed events when Telegram send fails", async () => {
+    await recordAnalyticsEvent(testDb.db, {
+      userId: "5100586818",
+      username: "barboruss",
+      source: "miniapp",
+      label: "открыл Mini App",
+      occurredAt: new Date("2026-08-11T09:21:11.000Z")
+    });
+
+    const sendMessage = vi.fn().mockRejectedValue(new Error("Telegram unavailable"));
+    await expect(
+      flushAnalyticsToTelegram({
+        db: testDb.db,
+        bot: { api: { sendMessage } } as unknown as Bot,
+        chatId: "-1001",
+        now: new Date("2026-08-11T09:22:00.000Z")
+      })
+    ).rejects.toThrow("Telegram unavailable");
+
+    expect(await testDb.db.analyticsEvent.count({ where: { flushedAt: null } })).toBe(1);
+  });
 });

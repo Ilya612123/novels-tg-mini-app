@@ -44,3 +44,21 @@ export async function markAnalyticsEventsFlushed(db: DbClient, ids: string[], fl
   });
   return result.count;
 }
+
+export async function claimAnalyticsEventsForFlush(db: DbClient, ids: string[], claimedAt = new Date()): Promise<number> {
+  if (ids.length === 0) return 0;
+  const result = await db.analyticsEvent.updateMany({
+    where: { id: { in: ids }, flushedAt: null },
+    data: { flushedAt: claimedAt }
+  });
+  return result.count;
+}
+
+export async function releaseAnalyticsEventsFlushClaim(db: DbClient, ids: string[], claimedAt: Date): Promise<number> {
+  if (ids.length === 0) return 0;
+  const result = await db.analyticsEvent.updateMany({
+    where: { id: { in: ids }, flushedAt: claimedAt },
+    data: { flushedAt: null }
+  });
+  return result.count;
+}
