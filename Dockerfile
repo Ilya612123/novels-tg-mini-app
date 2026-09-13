@@ -6,7 +6,7 @@ ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
 
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends openssl \
+    && apt-get install -y --no-install-recommends openssl postgresql-client sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable
@@ -24,7 +24,7 @@ RUN pnpm build
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_URL=file:/app/data/prod.db
+ENV DATABASE_URL=postgresql://novell_reader:novell_reader@postgres:5432/novell_reader?schema=public
 ENV MINI_APP_DIST_DIR=/app/apps/miniapp/dist
 
 EXPOSE 3000

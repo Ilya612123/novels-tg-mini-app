@@ -63,7 +63,9 @@ test("stopPortListeners sends SIGTERM once for each unique listener PID", async 
 });
 
 test("getDevPreparationCommands builds shared code, syncs the local Prisma database and imports EPUB before startup", () => {
-  assert.deepEqual(getDevPreparationCommands(), [
+  const databaseUrl = "postgresql://novell_reader:novell_reader@localhost:5432/novell_reader?schema=public";
+
+  assert.deepEqual(getDevPreparationCommands({}), [
     {
       name: "shared-build",
       command: "pnpm",
@@ -74,13 +76,38 @@ test("getDevPreparationCommands builds shared code, syncs the local Prisma datab
       name: "prisma",
       command: "pnpm",
       args: ["--filter", "@novell-reader/server", "exec", "prisma", "db", "push"],
-      env: { DATABASE_URL: "file:./dev.db" }
+      env: { DATABASE_URL: databaseUrl }
     },
     {
       name: "epub-import",
       command: "pnpm",
       args: ["--filter", "@novell-reader/server", "import:epub"],
-      env: { DATABASE_URL: "file:./dev.db" }
+      env: { DATABASE_URL: databaseUrl }
+    }
+  ]);
+});
+
+test("getDevPreparationCommands uses configured Postgres URL", () => {
+  const databaseUrl = "postgresql://custom:custom@localhost:5433/custom?schema=public";
+
+  assert.deepEqual(getDevPreparationCommands({ DATABASE_URL: databaseUrl }), [
+    {
+      name: "shared-build",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/shared", "build"],
+      env: {}
+    },
+    {
+      name: "prisma",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/server", "exec", "prisma", "db", "push"],
+      env: { DATABASE_URL: databaseUrl }
+    },
+    {
+      name: "epub-import",
+      command: "pnpm",
+      args: ["--filter", "@novell-reader/server", "import:epub"],
+      env: { DATABASE_URL: databaseUrl }
     }
   ]);
 });

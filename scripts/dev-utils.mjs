@@ -103,8 +103,9 @@ export function formatPortConflicts(ports) {
   return `[dev] Cannot start because ${list} ${ports.length === 1 ? "is" : "are"} already in use. Stop the existing process or set PORT/MINIAPP_PORT to free ports.${killHint}`;
 }
 
-export function getDevPreparationCommands() {
-  const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+export function getDevPreparationCommands(env = process.env) {
+  const databaseUrl =
+    env.DATABASE_URL ?? "postgresql://novell_reader:novell_reader@localhost:5432/novell_reader?schema=public";
 
   return [
     {

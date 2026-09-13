@@ -1,17 +1,38 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: novell_reader
+      POSTGRES_USER: novell_reader
+      POSTGRES_PASSWORD: novell_reader
+    ports:
+      - "5432:5432"
+    volumes:
+      - novell-reader-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novell_reader -d novell_reader"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   novell-reader:
     build:
       context: .
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       NODE_ENV: production
       PORT: "3000"
       BOT_MODE: polling
-      DATABASE_URL: file:/app/data/prod.db
+      DATABASE_URL: postgresql://novell_reader:novell_reader@postgres:5432/novell_reader?schema=public
       MINI_APP_DIST_DIR: /app/apps/miniapp/dist
-    command: ["sh", "-c", "pnpm --filter @novell-reader/server exec prisma db push && node apps/server/dist/index.js"]
+    command: ["sh", "-c", "pnpm --filter @novell-reader/server exec prisma db push && pnpm import:epub && node apps/server/dist/index.js"]
     ports:
       - "3000:3000"
     volumes:
@@ -24,5 +45,21 @@ services:
       retries: 3
       start_period: 30s
 
+  migrate-sqlite-to-postgres:
+    build:
+      context: .
+    profiles:
+      - migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SQLITE_DATABASE_PATH: /app/data/prod.db
+      PGDATABASE_URL: postgresql://novell_reader:novell_reader@postgres:5432/novell_reader
+    volumes:
+      - novell-reader-data:/app/data
+    command: ["bash", "scripts/migrate-sqlite-to-postgres.sh"]
+
 volumes:
   novell-reader-data:
+  novell-reader-postgres:

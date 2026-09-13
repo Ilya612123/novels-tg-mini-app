@@ -26,11 +26,11 @@ docker compose up -d --build
 Контейнер сам:
 
 - собирает backend и Mini App;
-- применяет Prisma schema к SQLite БД;
+- поднимает PostgreSQL и применяет Prisma schema;
 - импортирует EPUB из `content/epub/` в `content/imported/`;
 - запускает backend, Mini App static files и Telegram-бота в polling-режиме.
 
-Данные SQLite хранятся в Docker volume `novell-reader-data`. Папка `content` монтируется с хоста, поэтому EPUB и импортированный контент остаются рядом с репозиторием после перезапусков.
+Данные PostgreSQL хранятся в Docker volume `novell-reader-postgres`. Старый volume `novell-reader-data` оставлен для одноразовой миграции SQLite. Папка `content` монтируется с хоста, поэтому EPUB и импортированный контент остаются рядом с репозиторием после перезапусков.
 
 Telegram Ads attribution запускается вместе с backend. Настройки интервалов и окон:
 `TELEGRAM_ADS_COLLECT_INTERVAL_MS`, `TELEGRAM_ADS_MATCH_INTERVAL_MS`,
@@ -47,6 +47,13 @@ Telegram Ads snapshots не удаляются: они нужны для свя�
 ```bash
 docker compose ps
 docker compose logs -f novell-reader
+```
+
+Production Docker Compose uses PostgreSQL. To migrate an existing SQLite volume into PostgreSQL before starting the app, run:
+
+```bash
+docker compose --profile migrate run --rm migrate-sqlite-to-postgres
+docker compose up -d --build
 ```
 
 ## Локальный Быстрый Старт

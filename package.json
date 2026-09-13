@@ -8,6 +8,7 @@
     "test": "pnpm codegen && pnpm -r test",
     "build": "pnpm codegen && pnpm -r build",
     "dev": "node scripts/dev.mjs",
+    "dev:migrate-sqlite": "bash scripts/migrate-local-sqlite-to-postgres.sh",
     "dev:server": "pnpm --filter @novell-reader/server dev",
     "dev:miniapp": "pnpm --filter @novell-reader/miniapp dev",
     "prod-db:sync": "bash scripts/sync-prod-db.sh",

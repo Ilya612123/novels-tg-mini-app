@@ -1,6 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 export type TestDb = {
@@ -8,14 +6,16 @@ export type TestDb = {
   cleanup: () => Promise<void>;
 };
 
+const DEFAULT_TEST_DATABASE_URL = "postgresql://novell_reader:novell_reader@localhost:5432/novell_reader";
+
 const SCHEMA_SQL = [
   `CREATE TABLE "TelegramUser" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "username" TEXT,
     "firstName" TEXT,
     "lastName" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE "Book" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -28,8 +28,8 @@ const SCHEMA_SQL = [
     "freeChapterLimit" INTEGER NOT NULL,
     "sourceEpubFile" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'published',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE "Chapter" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -46,16 +46,16 @@ const SCHEMA_SQL = [
     "bookId" TEXT NOT NULL,
     "chapterNumber" INTEGER NOT NULL,
     "position" INTEGER NOT NULL,
-    "percent" REAL,
-    "startedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "percent" DOUBLE PRECISION,
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ReadingProgress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "ReadingProgress_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "UserAccess" (
     "userId" TEXT NOT NULL PRIMARY KEY,
-    "subscriptionUntil" DATETIME NOT NULL,
-    "updatedAt" DATETIME NOT NULL,
+    "subscriptionUntil" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "UserAccess_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "Payment" (
@@ -67,8 +67,8 @@ const SCHEMA_SQL = [
     "accessDays" INTEGER NOT NULL DEFAULT 30,
     "status" TEXT NOT NULL,
     "rawPayload" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "paidAt" DATETIME,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "paidAt" TIMESTAMP(3),
     CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "AnalyticsEvent" (
@@ -78,21 +78,21 @@ const SCHEMA_SQL = [
     "source" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "metadata" TEXT,
-    "occurredAt" DATETIME NOT NULL,
-    "flushedAt" DATETIME,
+    "occurredAt" TIMESTAMP(3) NOT NULL,
+    "flushedAt" TIMESTAMP(3),
     CONSTRAINT "AnalyticsEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "BotStartEvent" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "username" TEXT,
-    "occurredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "isFirstStart" BOOLEAN NOT NULL,
     CONSTRAINT "BotStartEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "TelegramAdsSnapshot" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "collectedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "collectedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "status" TEXT NOT NULL,
     "errorMessage" TEXT,
     "rawPayload" TEXT
@@ -105,7 +105,7 @@ const SCHEMA_SQL = [
     "views" INTEGER NOT NULL,
     "clicks" INTEGER NOT NULL,
     "actions" INTEGER NOT NULL,
-    "spent" REAL NOT NULL,
+    "spent" DOUBLE PRECISION NOT NULL,
     CONSTRAINT "TelegramAdMetric_snapshotId_fkey" FOREIGN KEY ("snapshotId") REFERENCES "TelegramAdsSnapshot" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE "TelegramAdActionDelta" (
@@ -113,8 +113,8 @@ const SCHEMA_SQL = [
     "adKey" TEXT NOT NULL,
     "adTitle" TEXT NOT NULL,
     "delta" INTEGER NOT NULL,
-    "observedFrom" DATETIME NOT NULL,
-    "observedTo" DATETIME NOT NULL,
+    "observedFrom" TIMESTAMP(3) NOT NULL,
+    "observedTo" TIMESTAMP(3) NOT NULL,
     "fromSnapshotId" TEXT,
     "toSnapshotId" TEXT
   )`,
@@ -125,9 +125,9 @@ const SCHEMA_SQL = [
     "status" TEXT NOT NULL,
     "primarySource" TEXT,
     "candidatesJson" TEXT,
-    "matchedWindowFrom" DATETIME NOT NULL,
-    "matchedWindowTo" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "matchedWindowFrom" TIMESTAMP(3) NOT NULL,
+    "matchedWindowTo" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "UserAttribution_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "UserAttribution_botStartEventId_fkey" FOREIGN KEY ("botStartEventId") REFERENCES "BotStartEvent" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
@@ -135,7 +135,7 @@ const SCHEMA_SQL = [
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "offerId" TEXT NOT NULL,
-    "shownAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "shownAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "PaywallWinbackImpression_userId_fkey" FOREIGN KEY ("userId") REFERENCES "TelegramUser" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE UNIQUE INDEX "Chapter_bookId_number_key" ON "Chapter"("bookId", "number")`,
@@ -158,11 +158,21 @@ const SCHEMA_SQL = [
   `CREATE UNIQUE INDEX "PaywallWinbackImpression_userId_offerId_key" ON "PaywallWinbackImpression"("userId", "offerId")`
 ];
 
-export async function createTestDb(): Promise<TestDb> {
-  const dir = mkdtempSync(path.join(tmpdir(), "novell-reader-test-"));
-  const databaseUrl = `file:${path.join(dir, "test.db")}`;
-  const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+function withSchema(databaseUrl: string, schema: string): string {
+  const url = new URL(databaseUrl);
+  url.searchParams.set("schema", schema);
+  return url.toString();
+}
 
+export async function createTestDb(): Promise<TestDb> {
+  const rootDatabaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
+  const schema = `test_${randomUUID().replaceAll("-", "_")}`;
+  const admin = new PrismaClient({ datasources: { db: { url: rootDatabaseUrl } } });
+
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+  await admin.$disconnect();
+
+  const db = new PrismaClient({ datasources: { db: { url: withSchema(rootDatabaseUrl, schema) } } });
   for (const statement of SCHEMA_SQL) {
     await db.$executeRawUnsafe(statement);
   }
@@ -171,7 +181,9 @@ export async function createTestDb(): Promise<TestDb> {
     db,
     cleanup: async () => {
       await db.$disconnect();
-      rmSync(dir, { recursive: true, force: true });
+      const cleanup = new PrismaClient({ datasources: { db: { url: rootDatabaseUrl } } });
+      await cleanup.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await cleanup.$disconnect();
     }
   };
 }

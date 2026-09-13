@@ -13,7 +13,7 @@
 - `PUBLIC_BASE_URL`: публичный URL сервера. Если задан, Mini App URL берется из него.
 - `MINI_APP_URL`: нужен только если Mini App живет не на домене сервера.
 - `SUPPORT_URL`: по умолчанию `https://t.me/esimsmile_support`.
-- `DATABASE_URL`: по умолчанию SQLite `file:./dev.db`.
+- `DATABASE_URL`: по умолчанию PostgreSQL `postgresql://novell_reader:novell_reader@localhost:5432/novell_reader?schema=public`.
 - `PORT`: по умолчанию `3000`.
 
 ## Telegram Bot
@@ -56,6 +56,27 @@ pnpm dev
 Vite проксирует `/api`, `/content` и `/telegram` на backend, поэтому один Cloudflare URL работает для Mini App и backend API. Локальный бот использует polling, потому что свежие `trycloudflare.com` hostname иногда недоступны DNS-резолверам Telegram Bot API для `setWebhook`.
 
 Для запуска нужен установленный `cloudflared`.
+
+Чтобы один раз перенести старую SQLite dev-БД `apps/server/prisma/dev.db` в PostgreSQL, запусти:
+
+```bash
+bun run dev:migrate-sqlite
+```
+
+Команда ожидает, что локальный PostgreSQL уже запущен и доступен через `DATABASE_URL`.
+
+Если локальную SQLite-БД нужно перенести повторно, запусти:
+
+```bash
+FORCE_LOCAL_SQLITE_MIGRATION=1 bun run dev:migrate-sqlite
+```
+
+Если PostgreSQL живет не на дефолтном URL, укажи его явно:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/novell_reader?schema=public bun dev
+DATABASE_URL=postgresql://user:password@localhost:5432/novell_reader?schema=public bun run dev:migrate-sqlite
+```
 
 ## Ручной Запуск
 

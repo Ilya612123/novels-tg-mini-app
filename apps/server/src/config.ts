@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { z } from "zod";
 
-export const DEFAULT_DATABASE_URL = "file:./dev.db";
+export const DEFAULT_DATABASE_URL = "postgresql://novell_reader:novell_reader@localhost:5432/novell_reader?schema=public";
 
 export function ensureDatabaseUrl(env = process.env) {
   if (!env.DATABASE_URL) {

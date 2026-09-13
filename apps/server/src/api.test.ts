@@ -20,7 +20,7 @@ const config: AppConfig = {
   SUPPORT_URL: "https://t.me/esimsmile_support",
   ANALYTICS_USER_ID: "5100586818",
   STARS_ACCESS_PRICE: 100,
-  DATABASE_URL: "file:test.db",
+  DATABASE_URL: "postgresql://novell_reader:novell_reader@localhost:5432/novell_reader?schema=public",
   PORT: 3000,
   BOT_MODE: "polling",
   TELEGRAM_ADS_COLLECT_INTERVAL_MS: 15000,
